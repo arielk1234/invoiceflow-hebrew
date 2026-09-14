@@ -14,7 +14,7 @@ export function DocPreview({
   business,
 }: {
   doc: Doc;
-  client?: Client;
+  client?: Client | undefined;
   business: BusinessInfo;
 }) {
   const t = totals(doc);

@@ -1,14 +1,16 @@
-# Welcome to your Lovable project
+# InvoiceFlow Hebrew
+
+Build a clean, modern, and user-friendly invoice and receipt generation system (in Hebrew with full RTL support). Include quick creation of invoices and receipts with customizable line items and tax/VAT calculation, client management, PDF preview/download, status tracking (draft, sent, paid), and a simple dashboard.
 
 This project was built with [Lovable](https://lovable.dev).
 
 ## Build with Lovable
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/16f1108c-1471-4294-b738-c308e2ca375f).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
@@ -20,10 +22,3 @@ cd <repository-name>
 npm i
 npm run dev
 ```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS

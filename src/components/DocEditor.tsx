@@ -158,7 +158,7 @@ export function DocEditor({
                 />
               </div>
               <div>
-                <label className={labelCls}>מחיr ליחידה (₪)</label>
+                <label className={labelCls}>מחיר ליחידה (₪)</label>
                 <input
                   type="number"
                   min={0}

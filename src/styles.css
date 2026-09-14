@@ -132,6 +132,11 @@
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
+@theme {
+  --font-sans: "Heebo", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Frank Ruhl Libre", Georgia, serif;
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
@@ -140,5 +145,22 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: "Heebo", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  h1,
+  h2 {
+    font-family: "Frank Ruhl Libre", Georgia, serif;
+    letter-spacing: 0;
+  }
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  body {
+    background: #fff;
   }
 }

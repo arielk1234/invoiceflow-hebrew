@@ -30,9 +30,9 @@ function seed(): AppData {
   const c3: Client = { id: uid(), name: "נועה בן־דוד", email: "noa.bd@gmail.com", phone: "052-7788990", address: "אלנבי 8, ירושלים" };
   const created = nowIso();
   return { business: { name: "אולפני יערה — ייעוץ ועיצוב", taxId: "039112477", address: "רחוב ביאליק 22, רמת גן", phone: "054-1234567", email: "yaara@studio.co.il", businessType: "licensed", vatRate: 18, documentPrefix: "INV" }, clients: [c1, c2, c3], docs: [
-    { id: uid(), type: "invoice", number: "2026-001", clientId: c1.id, issueDate: plusDays(-21), dueDate: plusDays(9), vatRate: 18, status: "sent", createdAt: created, issuedAt: created, items: [{ id: uid(), description: "עיצוב זהות מותג", quantity: 1, unitPrice: 8500 }, { id: uid(), description: "שעות ייעוץ", quantity: 6, unitPrice: 420 }], notes: "תנאי תשלום: שוטף + 30" },
-    { id: uid(), type: "invoice", number: "2026-002", clientId: c2.id, issueDate: plusDays(-8), dueDate: plusDays(22), vatRate: 18, status: "draft", createdAt: created, items: [{ id: uid(), description: "אפיון ממשק משתמש", quantity: 1, unitPrice: 12400 }] },
-    { id: uid(), type: "receipt", number: "K-2026-001", clientId: c3.id, issueDate: plusDays(-3), dueDate: plusDays(-3), vatRate: 18, status: "paid", paymentMethod: "העברה בנקאית", createdAt: created, issuedAt: created, items: [{ id: uid(), description: "סדנת צילום", quantity: 2, unitPrice: 650 }] },
+    { id: uid(), type: "invoice", number: "INV-2026-001", clientId: c1.id, issueDate: plusDays(-21), dueDate: plusDays(9), vatRate: 18, status: "sent", createdAt: created, issuedAt: created, items: [{ id: uid(), description: "עיצוב זהות מותג", quantity: 1, unitPrice: 8500 }, { id: uid(), description: "שעות ייעוץ", quantity: 6, unitPrice: 420 }], notes: "תנאי תשלום: שוטף + 30" },
+    { id: uid(), type: "invoice", number: "INV-2026-002", clientId: c2.id, issueDate: plusDays(-8), dueDate: plusDays(22), vatRate: 18, status: "draft", createdAt: created, items: [{ id: uid(), description: "אפיון ממשק משתמש", quantity: 1, unitPrice: 12400 }] },
+    { id: uid(), type: "receipt", number: "INV-K-2026-001", clientId: c3.id, issueDate: plusDays(-3), dueDate: plusDays(-3), vatRate: 18, status: "paid", paymentMethod: "העברה בנקאית", createdAt: created, issuedAt: created, items: [{ id: uid(), description: "סדנת צילום", quantity: 2, unitPrice: 650 }] },
   ], audit: [] };
 }
 
@@ -68,8 +68,21 @@ export const actions = {
   deleteDoc(id: string) { const d = load(); const doc = d.docs.find((x) => x.id === id); if (doc && doc.status !== "draft") throw new Error("מסמך שהופק אינו ניתן למחיקה. יש לבטל אותו או להפיק זיכוי."); commit({ ...d, docs: d.docs.filter((x) => x.id !== id) }); },
 };
 
-export function nextNumber(type: DocType, docs: Doc[]) { const year = new Date().getFullYear(); const prefix = type === "receipt" ? `K-${year}-` : type === "creditNote" ? `CN-${year}-` : `${year}-`; const nums = docs.filter((d) => d.type === type && d.number.startsWith(prefix)).map((d) => parseInt(d.number.slice(prefix.length), 10)).filter((n) => !Number.isNaN(n)); const next = (nums.length ? Math.max(...nums) : 0) + 1; return `${prefix}${String(next).padStart(3, "0")}`; }
-export function emptyDoc(type: DocType, docs: Doc[]): Doc { return { id: uid(), type, number: nextNumber(type, docs), clientId: "", issueDate: today(), dueDate: plusDays(30), items: [{ id: uid(), description: "", quantity: 1, unitPrice: 0 }], vatRate: 18, status: "draft", createdAt: nowIso() }; }
+/**
+ * Local/demo fallback only. Production numbering must come from the server RPC
+ * next_document_number(business_id, document_type, year), whose sequence key is
+ * (business_id, document_type, year). This prevents one business from consuming
+ * or colliding with another business's numbering sequence.
+ */
+export function nextNumber(type: DocType, docs: Doc[], business: Pick<BusinessInfo, "documentPrefix"> = { documentPrefix: "INV" }) {
+  const year = new Date().getFullYear();
+  const prefix = business.documentPrefix.trim() || "INV";
+  const numberPrefix = type === "receipt" ? `${prefix}-K-${year}-` : type === "creditNote" ? `${prefix}-CN-${year}-` : `${prefix}-${year}-`;
+  const nums = docs.filter((d) => d.type === type && d.number.startsWith(numberPrefix)).map((d) => parseInt(d.number.slice(numberPrefix.length), 10)).filter((n) => !Number.isNaN(n));
+  const next = (nums.length ? Math.max(...nums) : 0) + 1;
+  return `${numberPrefix}${String(next).padStart(3, "0")}`;
+}
+export function emptyDoc(type: DocType, docs: Doc[], business: Pick<BusinessInfo, "documentPrefix"> = { documentPrefix: "INV" }): Doc { return { id: uid(), type, number: nextNumber(type, docs, business), clientId: "", issueDate: today(), dueDate: plusDays(30), items: [{ id: uid(), description: "", quantity: 1, unitPrice: 0 }], vatRate: 18, status: "draft", createdAt: nowIso() }; }
 export function totals(doc: Pick<Doc, "items" | "vatRate">) { const subtotal = doc.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0); const vat = subtotal * doc.vatRate / 100; return { subtotal, vat, total: subtotal + vat }; }
 export const money = (n: number) => new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS", maximumFractionDigits: 2 }).format(n || 0);
 export const dateHe = (iso: string) => iso ? new Intl.DateTimeFormat("he-IL").format(new Date(iso)) : "";

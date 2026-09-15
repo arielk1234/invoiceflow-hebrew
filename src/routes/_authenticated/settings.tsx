@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { actions, useData, type BusinessInfo } from "@/lib/store";
 
-export const Route = createFileRoute("/settings")({
+export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
       { title: "הגדרות עסק — חשבונית קלה" },

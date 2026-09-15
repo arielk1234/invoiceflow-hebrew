@@ -8,7 +8,7 @@ import { DocPreview } from "@/components/DocPreview";
 import { StatusBadge } from "@/components/StatusBadge";
 import { actions, statusLabel, typeLabel, useData, type DocStatus } from "@/lib/store";
 
-export const Route = createFileRoute("/documents/$id")({
+export const Route = createFileRoute("/_authenticated/documents/$id")({
   head: () => ({
     meta: [
       { title: "צפייה במסמך — חשבונית קלה" },

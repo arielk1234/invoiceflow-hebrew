@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { actions, money, totals, uid, useData, type Client } from "@/lib/store";
 
-export const Route = createFileRoute("/clients")({
+export const Route = createFileRoute("/_authenticated/clients")({
   head: () => ({
     meta: [
       { title: "לקוחות — חשבונית קלה" },

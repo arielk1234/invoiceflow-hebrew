@@ -9,73 +9,92 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as ClientsRouteImport } from './routes/clients'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as DocumentsIndexRouteImport } from './routes/documents.index'
-import { Route as DocumentsIdRouteImport } from './routes/documents.$id'
-import { Route as DocumentsNewRouteImport } from './routes/documents.new'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedClientsRouteImport } from './routes/_authenticated/clients'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedDocumentsIndexRouteImport } from './routes/_authenticated/documents.index'
+import { Route as AuthenticatedDocumentsIdRouteImport } from './routes/_authenticated/documents.$id'
+import { Route as AuthenticatedDocumentsNewRouteImport } from './routes/_authenticated/documents.new'
 
-const IndexRoute = IndexRouteImport.update({
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const ClientsRoute = ClientsRouteImport.update({
+const AuthenticatedClientsRoute = AuthenticatedClientsRouteImport.update({
   id: '/clients',
   path: '/clients',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const SettingsRoute = SettingsRouteImport.update({
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const DocumentsIndexRoute = DocumentsIndexRouteImport.update({
-  id: '/documents/',
-  path: '/documents/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocumentsIdRoute = DocumentsIdRouteImport.update({
-  id: '/documents/$id',
-  path: '/documents/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocumentsNewRoute = DocumentsNewRouteImport.update({
-  id: '/documents/new',
-  path: '/documents/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const AuthenticatedDocumentsIndexRoute =
+  AuthenticatedDocumentsIndexRouteImport.update({
+    id: '/documents/',
+    path: '/documents/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDocumentsIdRoute =
+  AuthenticatedDocumentsIdRouteImport.update({
+    id: '/documents/$id',
+    path: '/documents/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDocumentsNewRoute =
+  AuthenticatedDocumentsNewRouteImport.update({
+    id: '/documents/new',
+    path: '/documents/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/clients': typeof ClientsRoute
-  '/settings': typeof SettingsRoute
-  '/documents/$id': typeof DocumentsIdRoute
-  '/documents/new': typeof DocumentsNewRoute
-  '/documents/': typeof DocumentsIndexRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/auth': typeof AuthRoute
+  '/clients': typeof AuthenticatedClientsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/documents/$id': typeof AuthenticatedDocumentsIdRoute
+  '/documents/new': typeof AuthenticatedDocumentsNewRoute
+  '/documents/': typeof AuthenticatedDocumentsIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/clients': typeof ClientsRoute
-  '/settings': typeof SettingsRoute
-  '/documents/$id': typeof DocumentsIdRoute
-  '/documents/new': typeof DocumentsNewRoute
-  '/documents': typeof DocumentsIndexRoute
+  '/auth': typeof AuthRoute
+  '/clients': typeof AuthenticatedClientsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/documents/$id': typeof AuthenticatedDocumentsIdRoute
+  '/documents/new': typeof AuthenticatedDocumentsNewRoute
+  '/documents': typeof AuthenticatedDocumentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/clients': typeof ClientsRoute
-  '/settings': typeof SettingsRoute
-  '/documents/$id': typeof DocumentsIdRoute
-  '/documents/new': typeof DocumentsNewRoute
-  '/documents/': typeof DocumentsIndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/clients': typeof AuthenticatedClientsRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/documents/$id': typeof AuthenticatedDocumentsIdRoute
+  '/_authenticated/documents/new': typeof AuthenticatedDocumentsNewRoute
+  '/_authenticated/documents/': typeof AuthenticatedDocumentsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth'
     | '/clients'
     | '/settings'
     | '/documents/$id'
@@ -83,85 +102,115 @@ export interface FileRouteTypes {
     | '/documents/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
+    | '/auth'
     | '/clients'
     | '/settings'
+    | '/'
     | '/documents/$id'
     | '/documents/new'
     | '/documents'
   id:
     | '__root__'
-    | '/'
-    | '/clients'
-    | '/settings'
-    | '/documents/$id'
-    | '/documents/new'
-    | '/documents/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/clients'
+    | '/_authenticated/settings'
+    | '/_authenticated/'
+    | '/_authenticated/documents/$id'
+    | '/_authenticated/documents/new'
+    | '/_authenticated/documents/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  ClientsRoute: typeof ClientsRoute
-  SettingsRoute: typeof SettingsRoute
-  DocumentsIdRoute: typeof DocumentsIdRoute
-  DocumentsNewRoute: typeof DocumentsNewRoute
-  DocumentsIndexRoute: typeof DocumentsIndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/clients': {
-      id: '/clients'
+    '/_authenticated/clients': {
+      id: '/_authenticated/clients'
       path: '/clients'
       fullPath: '/clients'
-      preLoaderRoute: typeof ClientsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedClientsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/settings': {
-      id: '/settings'
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
       path: '/settings'
       fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/documents/': {
-      id: '/documents/'
+    '/_authenticated/documents/': {
+      id: '/_authenticated/documents/'
       path: '/documents'
       fullPath: '/documents/'
-      preLoaderRoute: typeof DocumentsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedDocumentsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/documents/$id': {
-      id: '/documents/$id'
+    '/_authenticated/documents/$id': {
+      id: '/_authenticated/documents/$id'
       path: '/documents/$id'
       fullPath: '/documents/$id'
-      preLoaderRoute: typeof DocumentsIdRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedDocumentsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/documents/new': {
-      id: '/documents/new'
+    '/_authenticated/documents/new': {
+      id: '/_authenticated/documents/new'
       path: '/documents/new'
       fullPath: '/documents/new'
-      preLoaderRoute: typeof DocumentsNewRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedDocumentsNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedClientsRoute: typeof AuthenticatedClientsRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedDocumentsIdRoute: typeof AuthenticatedDocumentsIdRoute
+  AuthenticatedDocumentsNewRoute: typeof AuthenticatedDocumentsNewRoute
+  AuthenticatedDocumentsIndexRoute: typeof AuthenticatedDocumentsIndexRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedClientsRoute: AuthenticatedClientsRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedDocumentsIdRoute: AuthenticatedDocumentsIdRoute,
+  AuthenticatedDocumentsNewRoute: AuthenticatedDocumentsNewRoute,
+  AuthenticatedDocumentsIndexRoute: AuthenticatedDocumentsIndexRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  ClientsRoute: ClientsRoute,
-  SettingsRoute: SettingsRoute,
-  DocumentsIdRoute: DocumentsIdRoute,
-  DocumentsNewRoute: DocumentsNewRoute,
-  DocumentsIndexRoute: DocumentsIndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

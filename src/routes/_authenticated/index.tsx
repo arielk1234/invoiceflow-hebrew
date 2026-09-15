@@ -12,7 +12,7 @@ import {
 } from "@/lib/store";
 import { StatusBadge } from "@/components/StatusBadge";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "חשבונית קלה — הפקת חשבוניות וקבלות בעברית" },

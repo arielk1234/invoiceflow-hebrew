@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { DocEditor } from "@/components/DocEditor";
 import { emptyDoc, useData } from "@/lib/store";
 
-export const Route = createFileRoute("/documents/new")({
+export const Route = createFileRoute("/_authenticated/documents/new")({
   head: () => ({
     meta: [
       { title: "מסמך חדש — חשבונית קלה" },

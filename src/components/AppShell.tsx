@@ -1,6 +1,8 @@
-import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import { FileText, LayoutDashboard, Users, Settings, Plus } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { FileText, LayoutDashboard, Users, Settings, Plus, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const nav = [
   { to: "/", label: "לוח בקרה", icon: LayoutDashboard },
@@ -10,6 +12,21 @@ const nav = [
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
+  }, []);
+
+  async function handleSignOut() {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/auth", replace: true });
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-card/85 backdrop-blur print:hidden">
@@ -45,6 +62,23 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Plus className="size-4" />
             מסמך חדש
           </Link>
+
+          <div className="flex items-center gap-2">
+            {email && (
+              <span className="hidden max-w-[12rem] truncate text-xs text-muted-foreground lg:block">
+                {email}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleSignOut}
+              title="התנתקות"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              <LogOut className="size-4" />
+              <span className="hidden sm:inline">התנתקות</span>
+            </button>
+          </div>
         </div>
 
         <nav className="flex items-center gap-1 overflow-x-auto border-t border-border/60 px-4 py-2 md:hidden">

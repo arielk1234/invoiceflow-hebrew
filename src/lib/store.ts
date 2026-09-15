@@ -58,7 +58,8 @@ export const actions = {
     if (doc.items.some((i) => i.quantity <= 0 || i.unitPrice < 0)) throw new Error("נתוני השורות אינם תקינים");
     if (d.business.businessType === "exempt" && (doc.type === "invoice" || doc.type === "creditNote")) throw new Error("עוסק פטור אינו רשאי להפיק חשבונית מס או חשבונית זיכוי");
     if (doc.type === "creditNote" && !doc.relatedDocId) throw new Error("יש לקשר חשבונית זיכוי למסמך המקורי");
-    if (doc.type !== "receipt" && doc.vatRate < 0) throw new Error("שיעור המע״מ אינו תקין");
+    if (doc.type !== "receipt" && (doc.vatRate < 0 || doc.vatRate > 100)) throw new Error("שיעור המע״מ אינו תקין");
+    if (requiresAllocationNumber(doc) && !doc.allocationNumber) throw new Error("נדרש מספר הקצאה מרשות המסים לפני הפקת החשבונית");
     const issuedAt = nowIso(); const hash = documentHash(doc); const issued = { ...doc, status: "issued" as const, issuedAt, documentHash: hash };
     commit({ ...d, docs: d.docs.map((x) => x.id === id ? issued : x), audit: [...d.audit, { id: uid(), docId: id, action: "issued", at: issuedAt, documentHash: hash }] });
   },
@@ -73,6 +74,6 @@ export function totals(doc: Pick<Doc, "items" | "vatRate">) { const subtotal = d
 export const money = (n: number) => new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS", maximumFractionDigits: 2 }).format(n || 0);
 export const dateHe = (iso: string) => iso ? new Intl.DateTimeFormat("he-IL").format(new Date(iso)) : "";
 export function documentHash(doc: Pick<Doc, "id" | "type" | "number" | "clientId" | "issueDate" | "items" | "vatRate">) { const canonical = JSON.stringify({ id: doc.id, type: doc.type, number: doc.number, clientId: doc.clientId, issueDate: doc.issueDate, items: doc.items, vatRate: doc.vatRate }); let hash = 2166136261; for (let i = 0; i < canonical.length; i++) hash = Math.imul(hash ^ canonical.charCodeAt(i), 16777619); return (hash >>> 0).toString(16).padStart(8, "0"); }
-export function requiresAllocationNumber(doc: Pick<Doc, "type" | "status" | "vatRate" | "items">) { if (doc.type !== "invoice" || doc.status === "draft" || doc.vatRate <= 0) return false; const subtotal = doc.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0); return subtotal > 5000; }
+export function requiresAllocationNumber(doc: Pick<Doc, "type" | "vatRate" | "items">) { if (doc.type !== "invoice" || doc.vatRate <= 0) return false; const subtotal = doc.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0); return subtotal > 5000; }
 export const statusLabel: Record<DocStatus, string> = { draft: "טיוטה", issued: "הופק", sent: "נשלח", paid: "שולם", cancelled: "מבוטל" };
 export const typeLabel: Record<DocType, string> = { invoice: "חשבונית מס", receipt: "קבלה", creditNote: "חשבונית זיכוי" };

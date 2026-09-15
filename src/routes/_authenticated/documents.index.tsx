@@ -5,7 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { StatusBadge } from "@/components/StatusBadge";
 import { dateHe, money, totals, typeLabel, useData, type DocStatus } from "@/lib/store";
 
-export const Route = createFileRoute("/documents/")({
+export const Route = createFileRoute("/_authenticated/documents/")({
   head: () => ({
     meta: [
       { title: "מסמכים — חשבונית קלה" },

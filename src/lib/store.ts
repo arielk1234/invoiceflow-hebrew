@@ -4,11 +4,11 @@ export type DocType = "invoice" | "receipt" | "creditNote";
 export type DocStatus = "draft" | "issued" | "sent" | "paid" | "cancelled";
 export type BusinessType = "exempt" | "licensed" | "company" | "partnership";
 
-export type Client = { id: string; name: string; taxId?: string; email?: string; phone?: string; address?: string };
+export type Client = { id: string; name: string; taxId?: string; isRegisteredDealer?: boolean; email?: string; phone?: string; address?: string };
 export type LineItem = { id: string; description: string; quantity: number; unitPrice: number };
 export type BusinessInfo = { name: string; taxId: string; address: string; phone: string; email: string; businessType: BusinessType; vatRate: number; documentPrefix: string };
 export type AuditEvent = { id: string; docId: string; action: "created" | "issued" | "sent" | "paid" | "cancelled"; at: string; documentHash: string; note?: string };
-export type Doc = { id: string; type: DocType; number: string; clientId: string; issueDate: string; dueDate: string; items: LineItem[]; vatRate: number; status: DocStatus; notes?: string; paymentMethod?: string; createdAt: string; issuedAt?: string; cancelledAt?: string; cancellationReason?: string; relatedDocId?: string; allocationNumber?: string; documentHash?: string };
+export type Doc = { id: string; type: DocType; number: string; clientId: string; issueDate: string; dueDate: string; items: LineItem[]; vatRate: number; status: DocStatus; notes?: string; paymentMethod?: string; createdAt: string; issuedAt?: string; cancelledAt?: string; cancellationReason?: string; relatedDocId?: string; allocationNumber?: string; allocationRequested?: boolean; documentHash?: string };
 export type AppData = { business: BusinessInfo; clients: Client[]; docs: Doc[]; audit: AuditEvent[] };
 
 const KEY = "hesbonit-data-v2";
@@ -25,8 +25,8 @@ function normalizeLegacy(raw: unknown): AppData {
 }
 
 function seed(): AppData {
-  const c1: Client = { id: uid(), name: "סטודיו אלמוג עיצוב", taxId: "514789632", email: "hello@almog-studio.co.il", phone: "03-5551234", address: "הרצל 45, תל אביב" };
-  const c2: Client = { id: uid(), name: "כרמל טכנולוגיות בע״מ", taxId: "512336987", email: "finance@carmel-tech.co.il", phone: "04-8221100", address: "שדרות המגינים 12, חיפה" };
+  const c1: Client = { id: uid(), name: "סטודיו אלמוג עיצוב", taxId: "514789632", isRegisteredDealer: true, email: "hello@almog-studio.co.il", phone: "03-5551234", address: "הרצל 45, תל אביב" };
+  const c2: Client = { id: uid(), name: "כרמל טכנולוגיות בע״מ", taxId: "512336987", isRegisteredDealer: true, email: "finance@carmel-tech.co.il", phone: "04-8221100", address: "שדרות המגינים 12, חיפה" };
   const c3: Client = { id: uid(), name: "נועה בן־דוד", email: "noa.bd@gmail.com", phone: "052-7788990", address: "אלנבי 8, ירושלים" };
   const created = nowIso();
   return { business: { name: "אולפני יערה — ייעוץ ועיצוב", taxId: "039112477", address: "רחוב ביאליק 22, רמת גן", phone: "054-1234567", email: "yaara@studio.co.il", businessType: "licensed", vatRate: 18, documentPrefix: "INV" }, clients: [c1, c2, c3], docs: [
@@ -54,12 +54,14 @@ export const actions = {
   saveDoc(doc: Doc) { const d = load(); const existing = d.docs.find((x) => x.id === doc.id); if (existing?.status !== "draft") throw new Error("לא ניתן לערוך מסמך שהופק. יש להפיק מסמך זיכוי במקרה של תיקון."); const normalized = { ...doc, createdAt: existing?.createdAt ?? doc.createdAt ?? nowIso() }; commit({ ...d, docs: existing ? d.docs.map((x) => x.id === doc.id ? normalized : x) : [normalized, ...d.docs] }); },
   issueDoc(id: string) {
     const d = load(); const doc = d.docs.find((x) => x.id === id); if (!doc) throw new Error("המסמך לא נמצא"); if (doc.status !== "draft") throw new Error("המסמך כבר הופק ואינו ניתן להפקה מחדש");
-    if (!doc.clientId || !doc.items.some((i) => i.description.trim())) throw new Error("יש להשלים לקוח ושורת חיוב לפני הפקה");
+    const client = d.clients.find((x) => x.id === doc.clientId);
+    if (!doc.clientId || !client) throw new Error("יש להשלים לקוח לפני הפקה");
+    if (!doc.items.some((i) => i.description.trim())) throw new Error("יש להשלים לפחות שורת חיוב אחת לפני הפקה");
     if (doc.items.some((i) => i.quantity <= 0 || i.unitPrice < 0)) throw new Error("נתוני השורות אינם תקינים");
     if (d.business.businessType === "exempt" && (doc.type === "invoice" || doc.type === "creditNote")) throw new Error("עוסק פטור אינו רשאי להפיק חשבונית מס או חשבונית זיכוי");
     if (doc.type === "creditNote" && !doc.relatedDocId) throw new Error("יש לקשר חשבונית זיכוי למסמך המקורי");
     if (doc.type !== "receipt" && (doc.vatRate < 0 || doc.vatRate > 100)) throw new Error("שיעור המע״מ אינו תקין");
-    if (requiresAllocationNumber(doc) && !doc.allocationNumber) throw new Error("נדרש מספר הקצאה מרשות המסים לפני הפקת החשבונית");
+    if (requiresAllocationNumber(doc, client) && !doc.allocationNumber) throw new Error("נדרש מספר הקצאה מרשות המסים לפני הפקת החשבונית");
     const issuedAt = nowIso(); const hash = documentHash(doc); const issued = { ...doc, status: "issued" as const, issuedAt, documentHash: hash };
     commit({ ...d, docs: d.docs.map((x) => x.id === id ? issued : x), audit: [...d.audit, { id: uid(), docId: id, action: "issued", at: issuedAt, documentHash: hash }] });
   },
@@ -68,12 +70,7 @@ export const actions = {
   deleteDoc(id: string) { const d = load(); const doc = d.docs.find((x) => x.id === id); if (doc && doc.status !== "draft") throw new Error("מסמך שהופק אינו ניתן למחיקה. יש לבטל אותו או להפיק זיכוי."); commit({ ...d, docs: d.docs.filter((x) => x.id !== id) }); },
 };
 
-/**
- * Local/demo fallback only. Production numbering must come from the server RPC
- * next_document_number(business_id, document_type, year), whose sequence key is
- * (business_id, document_type, year). This prevents one business from consuming
- * or colliding with another business's numbering sequence.
- */
+/** Local/demo fallback only. Production numbering must come from the server RPC next_document_number(business_id, document_type, year). */
 export function nextNumber(type: DocType, docs: Doc[], business: Pick<BusinessInfo, "documentPrefix"> = { documentPrefix: "INV" }) {
   const year = new Date().getFullYear();
   const prefix = business.documentPrefix.trim() || "INV";
@@ -86,7 +83,26 @@ export function emptyDoc(type: DocType, docs: Doc[], business: Pick<BusinessInfo
 export function totals(doc: Pick<Doc, "items" | "vatRate">) { const subtotal = doc.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0); const vat = subtotal * doc.vatRate / 100; return { subtotal, vat, total: subtotal + vat }; }
 export const money = (n: number) => new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS", maximumFractionDigits: 2 }).format(n || 0);
 export const dateHe = (iso: string) => iso ? new Intl.DateTimeFormat("he-IL").format(new Date(iso)) : "";
+
 export function documentHash(doc: Pick<Doc, "id" | "type" | "number" | "clientId" | "issueDate" | "items" | "vatRate">) { const canonical = JSON.stringify({ id: doc.id, type: doc.type, number: doc.number, clientId: doc.clientId, issueDate: doc.issueDate, items: doc.items, vatRate: doc.vatRate }); let hash = 2166136261; for (let i = 0; i < canonical.length; i++) hash = Math.imul(hash ^ canonical.charCodeAt(i), 16777619); return (hash >>> 0).toString(16).padStart(8, "0"); }
-export function requiresAllocationNumber(doc: Pick<Doc, "type" | "vatRate" | "items">) { if (doc.type !== "invoice" || doc.vatRate <= 0) return false; const subtotal = doc.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0); return subtotal > 5000; }
+
+/**
+ * Israel Invoices 2026: mandatory allocation applies when all relevant conditions
+ * are met: tax invoice, VAT component is non-zero, recipient is a registered dealer,
+ * recipient requested an allocation number, and the pre-VAT amount exceeds the
+ * statutory threshold for the invoice date. Threshold: >10,000 ILS from 2026-01-01;
+ * >5,000 ILS from 2026-06-01.
+ */
+export function allocationThresholdForDate(issueDate: string): number {
+  return issueDate >= "2026-06-01" ? 5000 : issueDate >= "2026-01-01" ? 10000 : 20000;
+}
+
+export function requiresAllocationNumber(doc: Pick<Doc, "type" | "vatRate" | "items" | "issueDate" | "allocationRequested">, client?: Pick<Client, "isRegisteredDealer">) {
+  if (doc.type !== "invoice" || doc.vatRate <= 0) return false;
+  if (!client?.isRegisteredDealer || !doc.allocationRequested) return false;
+  const subtotal = doc.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+  return subtotal > allocationThresholdForDate(doc.issueDate);
+}
+
 export const statusLabel: Record<DocStatus, string> = { draft: "טיוטה", issued: "הופק", sent: "נשלח", paid: "שולם", cancelled: "מבוטל" };
 export const typeLabel: Record<DocType, string> = { invoice: "חשבונית מס", receipt: "קבלה", creditNote: "חשבונית זיכוי" };

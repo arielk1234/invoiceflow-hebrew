@@ -30,7 +30,7 @@ function NewDocPage() {
       </p>
       <DocEditor
         key={data.docs.length}
-        initial={emptyDoc("invoice", data.docs)}
+        initial={emptyDoc("invoice", data.docs, data.business)}
         clients={data.clients}
         allDocs={data.docs}
       />

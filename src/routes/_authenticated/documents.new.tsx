@@ -28,12 +28,7 @@ function NewDocPage() {
       <p className="mt-1 mb-6 text-sm text-muted-foreground">
         מלא את הפרטים — החישוב והמע״מ מתעדכנים אוטומטית.
       </p>
-      <DocEditor
-        key={data.docs.length}
-        initial={emptyDoc("invoice", data.docs)}
-        clients={data.clients}
-        allDocs={data.docs}
-      />
+      <DocEditor key={data.docs.length} initial={emptyDoc("invoice")} clients={data.clients} />
     </AppShell>
   );
 }

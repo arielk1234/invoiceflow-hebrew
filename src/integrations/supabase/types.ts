@@ -14,6 +14,296 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_events: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          business_id: string
+          created_at: string
+          entity: string
+          entity_id: string | null
+          id: string
+          payload: Json
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          business_id: string
+          created_at?: string
+          entity: string
+          entity_id?: string | null
+          id?: string
+          payload?: Json
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          business_id?: string
+          created_at?: string
+          entity?: string
+          entity_id?: string | null
+          id?: string
+          payload?: Json
+        }
+        Relationships: []
+      }
+      business_members: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["business_role"]
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["business_role"]
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["business_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_members_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      businesses: {
+        Row: {
+          address: string
+          business_type: Database["public"]["Enums"]["business_type"]
+          created_at: string
+          document_prefix: string
+          email: string
+          id: string
+          name: string
+          phone: string
+          tax_id: string
+          updated_at: string
+          vat_rate: number
+        }
+        Insert: {
+          address?: string
+          business_type?: Database["public"]["Enums"]["business_type"]
+          created_at?: string
+          document_prefix?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string
+          tax_id?: string
+          updated_at?: string
+          vat_rate?: number
+        }
+        Update: {
+          address?: string
+          business_type?: Database["public"]["Enums"]["business_type"]
+          created_at?: string
+          document_prefix?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string
+          tax_id?: string
+          updated_at?: string
+          vat_rate?: number
+        }
+        Relationships: []
+      }
+      clients: {
+        Row: {
+          address: string
+          business_id: string
+          created_at: string
+          email: string
+          id: string
+          name: string
+          phone: string
+          tax_id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string
+          business_id: string
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string
+          tax_id?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          business_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string
+          tax_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_items: {
+        Row: {
+          created_at: string
+          description: string
+          document_id: string
+          id: string
+          position: number
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          document_id: string
+          id?: string
+          position?: number
+          quantity?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          document_id?: string
+          id?: string
+          position?: number
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_items_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_sequences: {
+        Row: {
+          business_id: string
+          doc_type: Database["public"]["Enums"]["doc_type"]
+          last_number: number
+          year: number
+        }
+        Insert: {
+          business_id: string
+          doc_type: Database["public"]["Enums"]["doc_type"]
+          last_number?: number
+          year: number
+        }
+        Update: {
+          business_id?: string
+          doc_type?: Database["public"]["Enums"]["doc_type"]
+          last_number?: number
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_sequences_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          business_id: string
+          cancelled_at: string | null
+          client_id: string
+          created_at: string
+          created_by: string | null
+          due_date: string
+          id: string
+          issue_date: string
+          issued_at: string | null
+          notes: string
+          number: string
+          payment_method: string
+          status: Database["public"]["Enums"]["doc_status"]
+          type: Database["public"]["Enums"]["doc_type"]
+          updated_at: string
+          vat_rate: number
+        }
+        Insert: {
+          business_id: string
+          cancelled_at?: string | null
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          issue_date?: string
+          issued_at?: string | null
+          notes?: string
+          number?: string
+          payment_method?: string
+          status?: Database["public"]["Enums"]["doc_status"]
+          type?: Database["public"]["Enums"]["doc_type"]
+          updated_at?: string
+          vat_rate?: number
+        }
+        Update: {
+          business_id?: string
+          cancelled_at?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          issue_date?: string
+          issued_at?: string | null
+          notes?: string
+          number?: string
+          payment_method?: string
+          status?: Database["public"]["Enums"]["doc_status"]
+          type?: Database["public"]["Enums"]["doc_type"]
+          updated_at?: string
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_client_id_business_id_fkey"
+            columns: ["client_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           business_name: string
@@ -52,10 +342,53 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_access_document: { Args: { _document_id: string }; Returns: boolean }
+      cancel_document: {
+        Args: { _document_id: string; _reason?: string }
+        Returns: undefined
+      }
+      create_business: {
+        Args: {
+          _address?: string
+          _business_type: Database["public"]["Enums"]["business_type"]
+          _email?: string
+          _name: string
+          _phone?: string
+          _tax_id: string
+        }
+        Returns: string
+      }
+      has_business_role: {
+        Args: {
+          _business_id: string
+          _roles: Database["public"]["Enums"]["business_role"][]
+        }
+        Returns: boolean
+      }
+      is_business_member: { Args: { _business_id: string }; Returns: boolean }
+      log_audit: {
+        Args: {
+          _action: string
+          _business_id: string
+          _entity: string
+          _entity_id: string
+          _payload: Json
+        }
+        Returns: undefined
+      }
+      next_document_number: {
+        Args: {
+          _business_id: string
+          _type: Database["public"]["Enums"]["doc_type"]
+        }
+        Returns: string
+      }
     }
     Enums: {
+      business_role: "owner" | "admin" | "user"
       business_type: "osek_patur" | "osek_murshe" | "company"
+      doc_status: "draft" | "issued" | "sent" | "paid" | "cancelled"
+      doc_type: "invoice" | "receipt"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -183,7 +516,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      business_role: ["owner", "admin", "user"],
       business_type: ["osek_patur", "osek_murshe", "company"],
+      doc_status: ["draft", "issued", "sent", "paid", "cancelled"],
+      doc_type: ["invoice", "receipt"],
     },
   },
 } as const

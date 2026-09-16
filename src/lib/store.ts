@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export type DocType = "invoice" | "receipt";
-export type DocStatus = "draft" | "sent" | "paid";
+export type DocStatus = "draft" | "issued" | "sent" | "paid" | "cancelled";
+export type BusinessRole = "owner" | "admin" | "user";
 
 export type Client = {
   id: string;
@@ -20,11 +22,13 @@ export type LineItem = {
 };
 
 export type BusinessInfo = {
+  id: string;
   name: string;
   taxId: string;
   address: string;
   phone: string;
   email: string;
+  documentPrefix: string;
 };
 
 export type Doc = {
@@ -43,11 +47,11 @@ export type Doc = {
 
 export type AppData = {
   business: BusinessInfo;
+  businessId: string;
+  role: BusinessRole;
   clients: Client[];
   docs: Doc[];
 };
-
-const KEY = "hesbonit-data-v1";
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -55,114 +59,134 @@ const today = () => new Date().toISOString().slice(0, 10);
 const plusDays = (n: number) =>
   new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
 
-function seed(): AppData {
-  const c1: Client = {
-    id: uid(),
-    name: "סטודיו אלמוג עיצוב",
-    taxId: "514789632",
-    email: "hello@almog-studio.co.il",
-    phone: "03-5551234",
-    address: "הרצל 45, תל אביב",
-  };
-  const c2: Client = {
-    id: uid(),
-    name: "כרמל טכנולוגיות בע״מ",
-    taxId: "512336987",
-    email: "finance@carmel-tech.co.il",
-    phone: "04-8221100",
-    address: "שדרות המגינים 12, חיפה",
-  };
-  const c3: Client = {
-    id: uid(),
-    name: "נועה בן־דוד",
-    email: "noa.bd@gmail.com",
-    phone: "052-7788990",
-    address: "אלנבי 8, ירושלים",
-  };
-  return {
-    business: {
-      name: "אולפני יערה — ייעוץ ועיצוב",
-      taxId: "039112477",
-      address: "רחוב ביאליק 22, רמת גן",
-      phone: "054-1234567",
-      email: "yaara@studio.co.il",
-    },
-    clients: [c1, c2, c3],
-    docs: [
-      {
-        id: uid(),
-        type: "invoice",
-        number: "2026-001",
-        clientId: c1.id,
-        issueDate: plusDays(-21),
-        dueDate: plusDays(9),
-        vatRate: 18,
-        status: "sent",
-        items: [
-          { id: uid(), description: "עיצוב זהות מותג", quantity: 1, unitPrice: 8500 },
-          { id: uid(), description: "שעות ייעוץ", quantity: 6, unitPrice: 420 },
-        ],
-        notes: "תנאי תשלום: שוטף + 30",
-      },
-      {
-        id: uid(),
-        type: "invoice",
-        number: "2026-002",
-        clientId: c2.id,
-        issueDate: plusDays(-8),
-        dueDate: plusDays(22),
-        vatRate: 18,
-        status: "draft",
-        items: [
-          { id: uid(), description: "אפיון ממשק משתמש", quantity: 1, unitPrice: 12400 },
-        ],
-      },
-      {
-        id: uid(),
-        type: "receipt",
-        number: "K-2026-001",
-        clientId: c3.id,
-        issueDate: plusDays(-3),
-        dueDate: plusDays(-3),
-        vatRate: 18,
-        status: "paid",
-        paymentMethod: "העברה בנקאית",
-        items: [{ id: uid(), description: "סדנת צילום", quantity: 2, unitPrice: 650 }],
-      },
-    ],
-  };
-}
-
-let data: AppData | null = null;
+let cache: AppData | null = null;
+let inflight: Promise<AppData | null> | null = null;
 const listeners = new Set<() => void>();
 
-function load(): AppData {
-  if (data) return data;
-  if (typeof window === "undefined") return seed();
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    data = raw ? (JSON.parse(raw) as AppData) : seed();
-  } catch {
-    data = seed();
+const notify = () => listeners.forEach((l) => l());
+
+async function resolveActiveBusiness(userId: string) {
+  const { data: memberships, error } = await supabase
+    .from("business_members")
+    .select("business_id, role")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+
+  if (memberships && memberships.length > 0) {
+    const stored =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem("active-business")
+        : null;
+    const chosen =
+      memberships.find((m) => m.business_id === stored) ?? memberships[0]!;
+    return { businessId: chosen.business_id, role: chosen.role as BusinessRole };
   }
-  return data;
+
+  // first sign-in: create the user's business from their profile details
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("business_name, tax_id, business_type, email")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const { data: newId, error: rpcError } = await supabase.rpc("create_business", {
+    _name: profile?.business_name || "העסק שלי",
+    _tax_id: profile?.tax_id ?? "",
+    _business_type: profile?.business_type ?? "osek_patur",
+    _email: profile?.email ?? "",
+  });
+  if (rpcError) throw rpcError;
+  return { businessId: newId as string, role: "owner" as BusinessRole };
 }
 
-function commit(next: AppData) {
-  data = next;
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(KEY, JSON.stringify(next));
+async function fetchAll(): Promise<AppData | null> {
+  const { data: auth } = await supabase.auth.getUser();
+  const user = auth.user;
+  if (!user) return null;
+
+  const { businessId, role } = await resolveActiveBusiness(user.id);
+
+  const [businessRes, clientsRes, docsRes] = await Promise.all([
+    supabase.from("businesses").select("*").eq("id", businessId).single(),
+    supabase
+      .from("clients")
+      .select("*")
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("documents")
+      .select("*, document_items(*)")
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (businessRes.error) throw businessRes.error;
+  if (clientsRes.error) throw clientsRes.error;
+  if (docsRes.error) throw docsRes.error;
+
+  const b = businessRes.data;
+  return {
+    businessId,
+    role,
+    business: {
+      id: b.id,
+      name: b.name,
+      taxId: b.tax_id,
+      address: b.address,
+      phone: b.phone,
+      email: b.email,
+      documentPrefix: b.document_prefix,
+    },
+    clients: (clientsRes.data ?? []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      taxId: c.tax_id,
+      email: c.email,
+      phone: c.phone,
+      address: c.address,
+    })),
+    docs: (docsRes.data ?? []).map((d) => ({
+      id: d.id,
+      type: d.type as DocType,
+      number: d.number,
+      clientId: d.client_id,
+      issueDate: d.issue_date,
+      dueDate: d.due_date,
+      vatRate: Number(d.vat_rate),
+      status: d.status as DocStatus,
+      notes: d.notes,
+      paymentMethod: d.payment_method,
+      items: [...((d.document_items ?? []) as Array<Record<string, unknown>>)]
+        .sort((x, y) => Number(x['position']) - Number(y['position']))
+        .map((i) => ({
+          id: String(i['id']),
+          description: String(i['description'] ?? ""),
+          quantity: Number(i['quantity']),
+          unitPrice: Number(i['unit_price']),
+        })),
+    })),
+  };
+}
+
+export async function refresh() {
+  if (!inflight) {
+    inflight = fetchAll().finally(() => {
+      inflight = null;
+    });
   }
-  listeners.forEach((l) => l());
+  cache = await inflight;
+  notify();
+  return cache;
 }
 
 export function useData() {
-  const [state, setState] = useState<AppData | null>(null);
+  const [state, setState] = useState<AppData | null>(cache);
 
   useEffect(() => {
-    const sync = () => setState({ ...load() });
-    sync();
+    const sync = () => setState(cache ? { ...cache } : null);
     listeners.add(sync);
+    void refresh();
     return () => {
       listeners.delete(sync);
     };
@@ -171,58 +195,133 @@ export function useData() {
   return state;
 }
 
+function requireBusiness() {
+  if (!cache) throw new Error("NO_ACTIVE_BUSINESS");
+  return cache.businessId;
+}
+
 export const actions = {
-  saveBusiness(business: BusinessInfo) {
-    commit({ ...load(), business });
+  async saveBusiness(business: BusinessInfo) {
+    const businessId = requireBusiness();
+    const { error } = await supabase
+      .from("businesses")
+      .update({
+        name: business.name,
+        tax_id: business.taxId,
+        address: business.address,
+        phone: business.phone,
+        email: business.email,
+        document_prefix: business.documentPrefix ?? "",
+      })
+      .eq("id", businessId);
+    if (error) throw error;
+    await refresh();
   },
-  saveClient(client: Client) {
-    const d = load();
-    const exists = d.clients.some((c) => c.id === client.id);
-    commit({
-      ...d,
-      clients: exists
-        ? d.clients.map((c) => (c.id === client.id ? client : c))
-        : [...d.clients, client],
+
+  async saveClient(client: Client) {
+    const business_id = requireBusiness();
+    const payload = {
+      business_id,
+      name: client.name,
+      tax_id: client.taxId ?? "",
+      email: client.email ?? "",
+      phone: client.phone ?? "",
+      address: client.address ?? "",
+    };
+    const exists = cache?.clients.some((c) => c.id === client.id);
+    const { error } = exists
+      ? await supabase.from("clients").update(payload).eq("id", client.id)
+      : await supabase.from("clients").insert(payload);
+    if (error) throw error;
+    await refresh();
+  },
+
+  async deleteClient(id: string) {
+    const { error } = await supabase.from("clients").delete().eq("id", id);
+    if (error) throw error;
+    await refresh();
+  },
+
+  /** Returns the saved document id (server-generated on create). */
+  async saveDoc(doc: Doc): Promise<string> {
+    const business_id = requireBusiness();
+    const base = {
+      business_id,
+      client_id: doc.clientId,
+      type: doc.type,
+      issue_date: doc.issueDate,
+      due_date: doc.dueDate,
+      vat_rate: doc.vatRate,
+      notes: doc.notes ?? "",
+      payment_method: doc.paymentMethod ?? "",
+    };
+    const exists = Boolean(doc.id) && cache?.docs.some((d) => d.id === doc.id);
+
+    let docId = doc.id;
+    if (exists) {
+      const { error } = await supabase.from("documents").update(base).eq("id", doc.id);
+      if (error) throw error;
+      const { error: delErr } = await supabase
+        .from("document_items")
+        .delete()
+        .eq("document_id", doc.id);
+      if (delErr) throw delErr;
+    } else {
+      const { data, error } = await supabase
+        .from("documents")
+        .insert(base)
+        .select("id")
+        .single();
+      if (error) throw error;
+      docId = data.id;
+    }
+
+    const items = doc.items
+      .filter((i) => i.description.trim())
+      .map((i, index) => ({
+        document_id: docId,
+        description: i.description,
+        quantity: i.quantity,
+        unit_price: i.unitPrice,
+        position: index,
+      }));
+    if (items.length) {
+      const { error } = await supabase.from("document_items").insert(items);
+      if (error) throw error;
+    }
+
+    await refresh();
+    return docId;
+  },
+
+  async deleteDoc(id: string) {
+    const { error } = await supabase.from("documents").delete().eq("id", id);
+    if (error) throw error;
+    await refresh();
+  },
+
+  async cancelDoc(id: string, reason = "") {
+    const { error } = await supabase.rpc("cancel_document", {
+      _document_id: id,
+      _reason: reason,
     });
+    if (error) throw error;
+    await refresh();
   },
-  deleteClient(id: string) {
-    const d = load();
-    commit({ ...d, clients: d.clients.filter((c) => c.id !== id) });
-  },
-  saveDoc(doc: Doc) {
-    const d = load();
-    const exists = d.docs.some((x) => x.id === doc.id);
-    commit({
-      ...d,
-      docs: exists ? d.docs.map((x) => (x.id === doc.id ? doc : x)) : [doc, ...d.docs],
-    });
-  },
-  deleteDoc(id: string) {
-    const d = load();
-    commit({ ...d, docs: d.docs.filter((x) => x.id !== id) });
-  },
-  setStatus(id: string, status: DocStatus) {
-    const d = load();
-    commit({ ...d, docs: d.docs.map((x) => (x.id === id ? { ...x, status } : x)) });
+
+  async setStatus(id: string, status: DocStatus) {
+    if (status === "cancelled") return actions.cancelDoc(id);
+    const { error } = await supabase.from("documents").update({ status }).eq("id", id);
+    if (error) throw error;
+    await refresh();
   },
 };
 
-export function nextNumber(type: DocType, docs: Doc[]) {
-  const year = new Date().getFullYear();
-  const prefix = type === "invoice" ? `${year}-` : `K-${year}-`;
-  const nums = docs
-    .filter((d) => d.type === type && d.number.startsWith(prefix))
-    .map((d) => parseInt(d.number.slice(prefix.length), 10))
-    .filter((n) => !Number.isNaN(n));
-  const next = (nums.length ? Math.max(...nums) : 0) + 1;
-  return `${prefix}${String(next).padStart(3, "0")}`;
-}
-
-export function emptyDoc(type: DocType, docs: Doc[]): Doc {
+export function emptyDoc(type: DocType): Doc {
   return {
-    id: uid(),
+    id: "",
     type,
-    number: nextNumber(type, docs),
+    number: "",
     clientId: "",
     issueDate: today(),
     dueDate: plusDays(30),
@@ -250,11 +349,15 @@ export const dateHe = (iso: string) =>
 
 export const statusLabel: Record<DocStatus, string> = {
   draft: "טיוטה",
+  issued: "הופק",
   sent: "נשלח",
   paid: "שולם",
+  cancelled: "מבוטל",
 };
 
 export const typeLabel: Record<DocType, string> = {
   invoice: "חשבונית",
   receipt: "קבלה",
 };
+
+export const isLocked = (doc: Pick<Doc, "status">) => doc.status !== "draft";

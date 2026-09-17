@@ -32,14 +32,18 @@ function ClientsPage() {
 
   if (!data) return <AppShell>טוען…</AppShell>;
 
-  const save = () => {
+  const save = async () => {
     if (!draft?.name.trim()) {
       toast.error("יש להזין שם לקוח");
       return;
     }
-    actions.saveClient(draft);
-    setDraft(null);
-    toast.success("הלקוח נשמר");
+    try {
+      await actions.saveClient(draft);
+      setDraft(null);
+      toast.success("הלקוח נשמר בענן");
+    } catch {
+      toast.error("שמירת הלקוח נכשלה");
+    }
   };
 
   return (

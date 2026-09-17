@@ -51,6 +51,7 @@ function DocPage() {
   }
 
   const client = data.clients.find((c) => c.id === doc.clientId);
+  const locked = isLocked(doc);
 
   return (
     <AppShell>

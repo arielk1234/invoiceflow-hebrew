@@ -36,14 +36,14 @@ function createSupabaseClient() {
 }
 
 type BroadRpcClient = Omit<ReturnType<typeof createSupabaseClient>, 'rpc'> & {
-  rpc: (functionName: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: Error | null }>;
+  rpc: (...args: Parameters<ReturnType<typeof createSupabaseClient>['rpc']>) => ReturnType<ReturnType<typeof createSupabaseClient>['rpc']>;
 };
 
 let _supabase: BroadRpcClient | undefined;
 
 export const supabase = new Proxy({} as BroadRpcClient, {
   get(_, prop, receiver) {
-    if (!_supabase) _supabase = createSupabaseClient() as BroadRpcClient;
+    if (!_supabase) _supabase = createSupabaseClient() as unknown as BroadRpcClient;
     return Reflect.get(_supabase, prop, receiver);
   },
 });

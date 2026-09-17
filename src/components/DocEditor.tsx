@@ -87,9 +87,10 @@ export function DocEditor({
           <div>
             <label className={labelCls}>מספר מסמך</label>
             <input
-              className={field}
-              value={doc.number}
-              onChange={(e) => set("number", e.target.value)}
+              className={`${field} bg-secondary/60 text-muted-foreground`}
+              value={doc.number || "יוקצה אוטומטית"}
+              readOnly
+              disabled
             />
           </div>
           <div>

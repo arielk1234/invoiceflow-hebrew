@@ -109,12 +109,7 @@ function DocPage() {
       </div>
 
       {editing ? (
-        <DocEditor
-          initial={doc}
-          clients={data.clients}
-          allDocs={data.docs}
-          onDone={() => setEditing(false)}
-        />
+        <DocEditor initial={doc} clients={data.clients} onDone={() => setEditing(false)} />
       ) : (
         <DocPreview doc={doc} client={client} business={data.business} />
       )}

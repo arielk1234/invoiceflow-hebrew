@@ -1,14 +1,13 @@
 /**
  * Central Israeli tax/compliance rules used by the application.
  *
- * Important: this module deliberately does not invent a Tax Authority API
- * endpoint or a Uniform Format file schema. Those integrations must follow
- * the current official specifications published by the Israel Tax Authority.
+ * This module intentionally does not invent Tax Authority API endpoints or
+ * field layouts. Integration code must follow the current official specs.
  */
 
-export const UNIFORM_FORMAT_VERSION = "1.31" as const;
-export const UNIFORM_SIMULATOR_MIN_RECORDS = 2000 as const;
-export const UNIFORM_SIMULATOR_MAX_BYTES = 4 * 1024 * 1024 as const;
+export const UNIFORM_FORMAT_VERSION = "1.31";
+export const UNIFORM_SIMULATOR_MIN_RECORDS = 2000;
+export const UNIFORM_SIMULATOR_MAX_BYTES = 4 * 1024 * 1024;
 
 export type AllocationRuleInput = {
   issueDate: string;
@@ -24,10 +23,6 @@ export function allocationThresholdForDate(issueDate: string): number {
   return 20000;
 }
 
-/**
- * Returns true only when the statutory conditions for a mandatory allocation
- * number are all represented in the application's data.
- */
 export function requiresAllocationNumber(input: AllocationRuleInput): boolean {
   return (
     input.subtotalBeforeVat > allocationThresholdForDate(input.issueDate) &&

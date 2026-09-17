@@ -65,11 +65,16 @@ function DocPage() {
             {(["draft", "sent", "paid"] as DocStatus[]).map((s) => (
               <button
                 key={s}
-                onClick={() => {
-                  actions.setStatus(doc.id, s);
-                  toast.success(`הסטטוס עודכן ל״${statusLabel[s]}״`);
+                disabled={locked && s === "draft"}
+                onClick={async () => {
+                  try {
+                    await actions.setStatus(doc.id, s);
+                    toast.success(`הסטטוס עודכן ל״${statusLabel[s]}״`);
+                  } catch {
+                    toast.error("לא ניתן לשנות את הסטטוס של מסמך שהופק");
+                  }
                 }}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition disabled:opacity-40 ${
                   doc.status === s ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
                 }`}
               >
@@ -78,13 +83,15 @@ function DocPage() {
             ))}
           </div>
 
-          <button
-            onClick={() => setEditing((v) => !v)}
-            className="inline-flex items-center gap-2 rounded-lg border border-input px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary"
-          >
-            <Pencil className="size-4" />
-            {editing ? "סיום עריכה" : "עריכה"}
-          </button>
+          {!locked && (
+            <button
+              onClick={() => setEditing((v) => !v)}
+              className="inline-flex items-center gap-2 rounded-lg border border-input px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary"
+            >
+              <Pencil className="size-4" />
+              {editing ? "סיום עריכה" : "עריכה"}
+            </button>
+          )}
 
           <button
             onClick={() => window.print()}
@@ -94,17 +101,40 @@ function DocPage() {
             הורדת PDF
           </button>
 
-          <button
-            onClick={() => {
-              actions.deleteDoc(doc.id);
-              toast.success("המסמך נמחק");
-              navigate({ to: "/documents" });
-            }}
-            aria-label="מחיקת מסמך"
-            className="rounded-lg p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
-          >
-            <Trash2 className="size-4" />
-          </button>
+          {locked ? (
+            doc.status !== "cancelled" && (
+              <button
+                onClick={async () => {
+                  try {
+                    await actions.cancelDoc(doc.id);
+                    toast.success("המסמך בוטל");
+                  } catch {
+                    toast.error("אין לך הרשאה לבטל מסמך");
+                  }
+                }}
+                className="inline-flex items-center gap-2 rounded-lg border border-input px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Ban className="size-4" />
+                ביטול מסמך
+              </button>
+            )
+          ) : (
+            <button
+              onClick={async () => {
+                try {
+                  await actions.deleteDoc(doc.id);
+                  toast.success("המסמך נמחק");
+                  navigate({ to: "/documents" });
+                } catch {
+                  toast.error("לא ניתן למחוק את המסמך");
+                }
+              }}
+              aria-label="מחיקת מסמך"
+              className="rounded-lg p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          )}
         </div>
       </div>
 

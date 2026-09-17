@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import {
   actions,
   money,
-  nextNumber,
   totals,
   uid,
   type Client,
@@ -20,23 +19,21 @@ const labelCls = "mb-1.5 block text-xs font-semibold text-muted-foreground";
 export function DocEditor({
   initial,
   clients,
-  allDocs,
   onDone,
 }: {
   initial: Doc;
   clients: Client[];
-  allDocs: Doc[];
   onDone?: () => void;
 }) {
   const navigate = useNavigate();
   const [doc, setDoc] = useState<Doc>(initial);
+  const [saving, setSaving] = useState(false);
   const t = totals(doc);
 
   const set = <K extends keyof Doc>(key: K, value: Doc[K]) =>
     setDoc((d) => ({ ...d, [key]: value }));
 
-  const setType = (type: DocType) =>
-    setDoc((d) => ({ ...d, type, number: nextNumber(type, allDocs) }));
+  const setType = (type: DocType) => setDoc((d) => ({ ...d, type }));
 
   const updateItem = (id: string, patch: Partial<Doc["items"][number]>) =>
     setDoc((d) => ({
@@ -44,7 +41,7 @@ export function DocEditor({
       items: d.items.map((i) => (i.id === id ? { ...i, ...patch } : i)),
     }));
 
-  const save = () => {
+  const save = async () => {
     if (!doc.clientId) {
       toast.error("יש לבחור לקוח");
       return;
@@ -53,10 +50,17 @@ export function DocEditor({
       toast.error("יש להזין לפחות שורת חיוב אחת");
       return;
     }
-    actions.saveDoc(doc);
-    toast.success("המסמך נשמר");
-    if (onDone) onDone();
-    else navigate({ to: "/documents/$id", params: { id: doc.id } });
+    setSaving(true);
+    try {
+      const id = await actions.saveDoc(doc);
+      toast.success("המסמך נשמר בענן");
+      if (onDone) onDone();
+      else navigate({ to: "/documents/$id", params: { id } });
+    } catch {
+      toast.error("שמירת המסמך נכשלה");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -83,9 +87,10 @@ export function DocEditor({
           <div>
             <label className={labelCls}>מספר מסמך</label>
             <input
-              className={field}
-              value={doc.number}
-              onChange={(e) => set("number", e.target.value)}
+              className={`${field} bg-secondary/60 text-muted-foreground`}
+              value={doc.number || "יוקצה אוטומטית"}
+              readOnly
+              disabled
             />
           </div>
           <div>

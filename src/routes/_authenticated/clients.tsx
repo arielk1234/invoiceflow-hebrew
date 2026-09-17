@@ -32,14 +32,18 @@ function ClientsPage() {
 
   if (!data) return <AppShell>טוען…</AppShell>;
 
-  const save = () => {
+  const save = async () => {
     if (!draft?.name.trim()) {
       toast.error("יש להזין שם לקוח");
       return;
     }
-    actions.saveClient(draft);
-    setDraft(null);
-    toast.success("הלקוח נשמר");
+    try {
+      await actions.saveClient(draft);
+      setDraft(null);
+      toast.success("הלקוח נשמר בענן");
+    } catch {
+      toast.error("שמירת הלקוח נכשלה");
+    }
   };
 
   return (
@@ -134,9 +138,13 @@ function ClientsPage() {
                   </button>
                   <button
                     aria-label="מחיקת לקוח"
-                    onClick={() => {
-                      actions.deleteClient(c.id);
-                      toast.success("הלקוח נמחק");
+                    onClick={async () => {
+                      try {
+                        await actions.deleteClient(c.id);
+                        toast.success("הלקוח נמחק");
+                      } catch {
+                        toast.error("לא ניתן למחוק לקוח שמשויך למסמכים");
+                      }
                     }}
                     className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   >

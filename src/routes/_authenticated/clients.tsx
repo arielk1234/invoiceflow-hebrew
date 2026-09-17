@@ -138,9 +138,13 @@ function ClientsPage() {
                   </button>
                   <button
                     aria-label="מחיקת לקוח"
-                    onClick={() => {
-                      actions.deleteClient(c.id);
-                      toast.success("הלקוח נמחק");
+                    onClick={async () => {
+                      try {
+                        await actions.deleteClient(c.id);
+                        toast.success("הלקוח נמחק");
+                      } catch {
+                        toast.error("לא ניתן למחוק לקוח שמשויך למסמכים");
+                      }
                     }}
                     className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   >

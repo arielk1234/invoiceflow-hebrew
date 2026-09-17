@@ -39,13 +39,14 @@ function SettingsPage() {
     { key: "address", label: "כתובת" },
     { key: "phone", label: "טלפון" },
     { key: "email", label: "דוא״ל" },
+    { key: "documentPrefix", label: "קידומת מספור מסמכים" },
   ];
 
   return (
     <AppShell>
       <h1 className="text-2xl font-bold text-foreground">הגדרות עסק</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        הפרטים האלה מופיעים בראש כל חשבונית וקבלה.
+        הפרטים האלה מופיעים בראש כל חשבונית וקבלה ונשמרים בענן.
       </p>
 
       <section className="mt-6 max-w-2xl rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -55,16 +56,20 @@ function SettingsPage() {
               <label className={labelCls}>{f.label}</label>
               <input
                 className={field}
-                value={form[f.key]}
+                value={form[f.key] ?? ""}
                 onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
               />
             </div>
           ))}
         </div>
         <button
-          onClick={() => {
-            actions.saveBusiness(form);
-            toast.success("פרטי העסק נשמרו");
+          onClick={async () => {
+            try {
+              await actions.saveBusiness(form);
+              toast.success("פרטי העסק נשמרו בענן");
+            } catch {
+              toast.error("אין לך הרשאה לעדכן את פרטי העסק");
+            }
           }}
           className="mt-5 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
         >

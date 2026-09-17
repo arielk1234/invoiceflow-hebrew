@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export type DocType = "invoice" | "receipt";
+export type DocType = "invoice" | "receipt" | "credit_note";
 export type DocStatus = "draft" | "issued" | "sent" | "paid" | "cancelled";
 export type BusinessRole = "owner" | "admin" | "user";
 
@@ -12,6 +12,7 @@ export type Client = {
   email?: string;
   phone?: string;
   address?: string;
+  isVatRegistered: boolean;
 };
 
 export type LineItem = {
@@ -29,6 +30,8 @@ export type BusinessInfo = {
   phone: string;
   email: string;
   documentPrefix: string;
+  businessType: "osek_patur" | "osek_murshe" | "company";
+  vatRate: number;
 };
 
 export type Doc = {
@@ -43,6 +46,14 @@ export type Doc = {
   status: DocStatus;
   notes?: string;
   paymentMethod?: string;
+  relatedDocumentId?: string;
+  allocationRequested: boolean;
+  allocationNumber?: string;
+  allocationRequestedAt?: string;
+  subtotal?: number;
+  vatAmount?: number;
+  totalAmount?: number;
+  contentHash?: string;
 };
 
 export type AppData = {
@@ -62,8 +73,9 @@ const plusDays = (n: number) =>
 let cache: AppData | null = null;
 let inflight: Promise<AppData | null> | null = null;
 const listeners = new Set<() => void>();
-
 const notify = () => listeners.forEach((l) => l());
+
+type UnknownRecord = Record<string, unknown>;
 
 async function resolveActiveBusiness(userId: string) {
   const { data: memberships, error } = await supabase
@@ -83,7 +95,6 @@ async function resolveActiveBusiness(userId: string) {
     return { businessId: chosen.business_id, role: chosen.role as BusinessRole };
   }
 
-  // first sign-in: create the user's business from their profile details
   const { data: profile } = await supabase
     .from("profiles")
     .select("business_name, tax_id, business_type, email")
@@ -137,35 +148,52 @@ async function fetchAll(): Promise<AppData | null> {
       phone: b.phone,
       email: b.email,
       documentPrefix: b.document_prefix,
+      businessType: b.business_type,
+      vatRate: Number(b.vat_rate ?? 18),
     },
-    clients: (clientsRes.data ?? []).map((c) => ({
-      id: c.id,
-      name: c.name,
-      taxId: c.tax_id,
-      email: c.email,
-      phone: c.phone,
-      address: c.address,
-    })),
-    docs: (docsRes.data ?? []).map((d) => ({
-      id: d.id,
-      type: d.type as DocType,
-      number: d.number,
-      clientId: d.client_id,
-      issueDate: d.issue_date,
-      dueDate: d.due_date,
-      vatRate: Number(d.vat_rate),
-      status: d.status as DocStatus,
-      notes: d.notes,
-      paymentMethod: d.payment_method,
-      items: [...((d.document_items ?? []) as Array<Record<string, unknown>>)]
-        .sort((x, y) => Number(x['position']) - Number(y['position']))
-        .map((i) => ({
-          id: String(i['id']),
-          description: String(i['description'] ?? ""),
-          quantity: Number(i['quantity']),
-          unitPrice: Number(i['unit_price']),
-        })),
-    })),
+    clients: (clientsRes.data ?? []).map((c) => {
+      const row = c as UnknownRecord;
+      return {
+        id: c.id,
+        name: c.name,
+        taxId: c.tax_id,
+        email: c.email,
+        phone: c.phone,
+        address: c.address,
+        isVatRegistered: Boolean(row.is_vat_registered),
+      };
+    }),
+    docs: (docsRes.data ?? []).map((d) => {
+      const row = d as UnknownRecord;
+      return {
+        id: d.id,
+        type: d.type as DocType,
+        number: d.number,
+        clientId: d.client_id,
+        issueDate: d.issue_date,
+        dueDate: d.due_date,
+        vatRate: Number(d.vat_rate),
+        status: d.status as DocStatus,
+        notes: d.notes,
+        paymentMethod: d.payment_method,
+        relatedDocumentId: typeof row.related_document_id === "string" ? row.related_document_id : undefined,
+        allocationRequested: Boolean(row.allocation_requested),
+        allocationNumber: typeof row.allocation_number === "string" ? row.allocation_number : undefined,
+        allocationRequestedAt: typeof row.allocation_requested_at === "string" ? row.allocation_requested_at : undefined,
+        subtotal: typeof row.subtotal === "number" ? row.subtotal : undefined,
+        vatAmount: typeof row.vat_amount === "number" ? row.vat_amount : undefined,
+        totalAmount: typeof row.total_amount === "number" ? row.total_amount : undefined,
+        contentHash: typeof row.content_hash === "string" ? row.content_hash : undefined,
+        items: [...((d.document_items ?? []) as Array<Record<string, unknown>>)]
+          .sort((x, y) => Number(x.position) - Number(y.position))
+          .map((i) => ({
+            id: String(i.id),
+            description: String(i.description ?? ""),
+            quantity: Number(i.quantity),
+            unitPrice: Number(i.unit_price),
+          })),
+      };
+    }),
   };
 }
 
@@ -187,9 +215,7 @@ export function useData() {
     const sync = () => setState(cache ? { ...cache } : null);
     listeners.add(sync);
     void refresh();
-    return () => {
-      listeners.delete(sync);
-    };
+    return () => listeners.delete(sync);
   }, []);
 
   return state;
@@ -227,11 +253,13 @@ export const actions = {
       email: client.email ?? "",
       phone: client.phone ?? "",
       address: client.address ?? "",
+      is_vat_registered: client.isVatRegistered,
     };
     const exists = cache?.clients.some((c) => c.id === client.id);
-    const { error } = exists
-      ? await supabase.from("clients").update(payload).eq("id", client.id)
-      : await supabase.from("clients").insert(payload);
+    const query = exists
+      ? supabase.from("clients").update(payload as never).eq("id", client.id)
+      : supabase.from("clients").insert(payload as never);
+    const { error } = await query;
     if (error) throw error;
     await refresh();
   },
@@ -242,7 +270,6 @@ export const actions = {
     await refresh();
   },
 
-  /** Returns the saved document id (server-generated on create). */
   async saveDoc(doc: Doc): Promise<string> {
     const business_id = requireBusiness();
     const base = {
@@ -254,12 +281,16 @@ export const actions = {
       vat_rate: doc.vatRate,
       notes: doc.notes ?? "",
       payment_method: doc.paymentMethod ?? "",
+      related_document_id: doc.relatedDocumentId ?? null,
+      allocation_requested: doc.allocationRequested,
+      allocation_number: doc.allocationNumber ?? null,
+      allocation_requested_at: doc.allocationRequested ? doc.allocationRequestedAt ?? new Date().toISOString() : null,
     };
     const exists = Boolean(doc.id) && cache?.docs.some((d) => d.id === doc.id);
 
     let docId = doc.id;
     if (exists) {
-      const { error } = await supabase.from("documents").update(base).eq("id", doc.id);
+      const { error } = await supabase.from("documents").update(base as never).eq("id", doc.id);
       if (error) throw error;
       const { error: delErr } = await supabase
         .from("document_items")
@@ -269,7 +300,7 @@ export const actions = {
     } else {
       const { data, error } = await supabase
         .from("documents")
-        .insert(base)
+        .insert(base as never)
         .select("id")
         .single();
       if (error) throw error;
@@ -294,7 +325,15 @@ export const actions = {
     return docId;
   },
 
+  async issueDoc(id: string) {
+    const { error } = await supabase.rpc("issue_document", { _document_id: id });
+    if (error) throw error;
+    await refresh();
+  },
+
   async deleteDoc(id: string) {
+    const doc = cache?.docs.find((d) => d.id === id);
+    if (doc && doc.status !== "draft") throw new Error("ISSUED_DOCUMENT_CANNOT_BE_DELETED");
     const { error } = await supabase.from("documents").delete().eq("id", id);
     if (error) throw error;
     await refresh();
@@ -311,6 +350,7 @@ export const actions = {
 
   async setStatus(id: string, status: DocStatus) {
     if (status === "cancelled") return actions.cancelDoc(id);
+    if (!["sent", "paid"].includes(status)) throw new Error("INVALID_STATUS_TRANSITION");
     const { error } = await supabase.from("documents").update({ status }).eq("id", id);
     if (error) throw error;
     await refresh();
@@ -328,6 +368,7 @@ export function emptyDoc(type: DocType): Doc {
     items: [{ id: uid(), description: "", quantity: 1, unitPrice: 0 }],
     vatRate: 18,
     status: "draft",
+    allocationRequested: false,
   };
 }
 
@@ -356,8 +397,9 @@ export const statusLabel: Record<DocStatus, string> = {
 };
 
 export const typeLabel: Record<DocType, string> = {
-  invoice: "חשבונית",
+  invoice: "חשבונית מס",
   receipt: "קבלה",
+  credit_note: "חשבונית זיכוי",
 };
 
 export const isLocked = (doc: Pick<Doc, "status">) => doc.status !== "draft";

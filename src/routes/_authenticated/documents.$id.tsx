@@ -1,12 +1,19 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Download, Pencil, Trash2, ArrowRight } from "lucide-react";
+import { Download, Pencil, Trash2, ArrowRight, Ban } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { DocEditor } from "@/components/DocEditor";
 import { DocPreview } from "@/components/DocPreview";
 import { StatusBadge } from "@/components/StatusBadge";
-import { actions, statusLabel, typeLabel, useData, type DocStatus } from "@/lib/store";
+import {
+  actions,
+  isLocked,
+  statusLabel,
+  typeLabel,
+  useData,
+  type DocStatus,
+} from "@/lib/store";
 
 export const Route = createFileRoute("/_authenticated/documents/$id")({
   head: () => ({

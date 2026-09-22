@@ -48,8 +48,8 @@ export const requestIsraelAllocation = createServerFn({ method: "POST" })
       throw new Error("DOCUMENT_NOT_DRAFT");
     }
 
-    const client = document.clients as Database["public"]["Tables"]["clients"]["Row"] | null;
-    const business = document.businesses as Database["public"]["Tables"]["businesses"]["Row"] | null;
+    const client = document.clients as unknown as Database["public"]["Tables"]["clients"]["Row"] | null;
+    const business = document.businesses as unknown as Database["public"]["Tables"]["businesses"]["Row"] | null;
 
     if (!client || !business) throw new Error("DOCUMENT_RELATIONS_NOT_FOUND");
 
@@ -186,8 +186,8 @@ export const requestIsraelAllocation = createServerFn({ method: "POST" })
     const endpoint =
       process.env.ISRAEL_INVOICE_API_BASE_URL ||
       (environment === "production"
-        ? "https://openapi.taxes.gov.il/shaam/production/Invoices/v2/Approval"
-        : "https://openapi.taxes.gov.il/shaam/tsandbox/Invoices/v2/Approval");
+        ? "https://openapi.taxes.gov.il/shaam/production/invoice-information/v1/confirmationNumber"
+        : "https://ita-api.taxes.gov.il/shaam/tsandbox/invoice-information/v1/confirmationNumber");
 
     let response: Response;
     try {

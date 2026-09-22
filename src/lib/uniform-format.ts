@@ -200,7 +200,9 @@ function ini(
   if (config.accountingBalanceLevel) field(r, 186, 1, String(config.accountingBalanceLevel), true);
   if (config.companyNumber) field(r, 187, 9, n(config.companyNumber, 9), true);
   if (config.withholdingFileNumber) field(r, 196, 9, n(config.withholdingFileNumber, 9), true);
-  field(r, 135, 50, "OPENFRMT");
+  const stamp = String(generatedAt.getMonth() + 1).padStart(2, "0") + String(generatedAt.getDate()).padStart(2, "0") + time4(generatedAt);
+  const folder = business.taxId.slice(0, 8) + "." + String(generatedAt.getFullYear()).slice(-2);
+  field(r, 135, 50, "OPENFRMT\\" + folder + "\\" + stamp);
   field(r, 215, 50, business.name);
   field(r, 265, 50, business.address);
   if ((config.softwareType || 2) === 1) field(r, 363, 4, fromDate.slice(0, 4), true);

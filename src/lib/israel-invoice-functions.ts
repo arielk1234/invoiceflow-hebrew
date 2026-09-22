@@ -68,6 +68,15 @@ export const requestIsraelAllocation = createServerFn({ method: "POST" })
     const vatAmount = Number((subtotal * Number(document.vat_rate) / 100).toFixed(2));
     const totalAmount = Number((subtotal + vatAmount).toFixed(2));
 
+    if (document.type !== "invoice") {
+      return {
+        required: false,
+        documentId: document.id,
+        documentNumber: document.number || null,
+        allocationNumber: document.allocation_number || null,
+      };
+    }
+
     if (!requiresAllocationNumber({
       issueDate: document.issue_date,
       subtotalBeforeVat: subtotal,
@@ -90,6 +99,32 @@ export const requestIsraelAllocation = createServerFn({ method: "POST" })
         documentNumber: document.number || null,
         allocationNumber: document.allocation_number,
       };
+    }
+
+    const environment = (process.env.ISRAEL_INVOICE_API_ENVIRONMENT || "sandbox") as "sandbox" | "production";
+    const adminUrl = process.env.SUPABASE_URL;
+    const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!adminUrl || !adminKey) throw new Error("SUPABASE_SERVER_CONFIGURATION_MISSING");
+    const admin = createClient<Database>(adminUrl, adminKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    const { data: connection, error: connectionError } = await admin
+      .from("tax_authority_connections")
+      .select("*")
+      .eq("business_id", document.business_id)
+      .eq("environment", environment)
+      .eq("provider", "israel_tax_authority")
+      .single();
+
+    if (connectionError || !connection?.access_token_ciphertext) {
+      throw new Error("ISRAEL_INVOICE_OAUTH_NOT_CONNECTED");
+    }
+
+    const customerVat = String(client.tax_id ?? "").trim();
+    const issuerVat = String(business.tax_id ?? "").trim();
+    if (!/^\d{9}$/.test(customerVat) || !/^\d{9}$/.test(issuerVat)) {
+      throw new Error("INVALID_VAT_NUMBER_FOR_ALLOCATION");
     }
 
     const { data: reservedNumber, error: reserveError } = await supabase.rpc(
@@ -118,30 +153,6 @@ export const requestIsraelAllocation = createServerFn({ method: "POST" })
 
     if (requestRow.status === "submitted") {
       throw new Error("ALLOCATION_REQUEST_AMBIGUOUS_RETRY_BLOCKED");
-    }
-
-    const admin = createClient<Database>(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { persistSession: false, autoRefreshToken: false } },
-    );
-
-    const environment = (process.env.ISRAEL_INVOICE_API_ENVIRONMENT || "sandbox") as "sandbox" | "production";
-    const { data: connection, error: connectionError } = await admin
-      .from("tax_authority_connections")
-      .select("*")
-      .eq("business_id", document.business_id)
-      .eq("environment", environment)
-      .single();
-
-    if (connectionError || !connection?.access_token_ciphertext) {
-      await supabase.rpc("update_tax_authority_request", {
-        _request_id: requestRow.id,
-        _status: "failed",
-        _error_code: "OAUTH_NOT_CONNECTED",
-        _error_message: "Tax Authority OAuth connection is not configured for this business",
-      });
-      throw new Error("ISRAEL_INVOICE_OAUTH_NOT_CONNECTED");
     }
 
     let accessTokenForTaxAuthority = decryptSecret(connection.access_token_ciphertext);
@@ -194,6 +205,12 @@ export const requestIsraelAllocation = createServerFn({ method: "POST" })
         body: JSON.stringify(requestBody),
       });
     } catch {
+      await supabase.rpc("update_tax_authority_request", {
+        _request_id: requestRow.id,
+        _status: "failed",
+        _error_code: "NETWORK_ERROR",
+        _error_message: "Tax Authority API network request failed",
+      });
       throw new Error("ALLOCATION_API_NETWORK_ERROR");
     }
 

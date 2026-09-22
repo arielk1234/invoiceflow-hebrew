@@ -170,14 +170,10 @@ export const requestIsraelAllocation = createServerFn({ method: "POST" })
     }
 
     const requestBody = buildAllocationRequest({
-      invoiceId: document.id,
-      invoiceType: document.type === "invoice" ? 305 : document.type === "credit_note" ? 330 : 320,
       customerVatNumber: client.tax_id,
       issuerVatNumber: business.tax_id,
-      customerName: client.name,
       subtotalBeforeVat: subtotal,
       vatAmount,
-      totalAmount,
       issueDate: document.issue_date,
       invoiceNumber: reservedNumber,
     });

@@ -20,61 +20,40 @@ on public.tax_authority_connections
 for select to authenticated
 using (public.has_business_role(business_id, array['owner','admin']::public.business_role[]));
 
-create policy "business admins can insert tax authority connection"
-on public.tax_authority_connections
-for insert to authenticated
-with check (public.has_business_role(business_id, array['owner','admin']::public.business_role[]));
-
-create policy "business admins can update tax authority connection"
-on public.tax_authority_connections
-for update to authenticated
-using (public.has_business_role(business_id, array['owner','admin']::public.business_role[]))
-with check (public.has_business_role(business_id, array['owner','admin']::public.business_role[]));
-
-create or replace function public.upsert_tax_authority_connection(
+create or replace function public.get_tax_authority_connection_status(
   _business_id uuid,
-  _environment text,
-  _access_token_ciphertext text,
-  _refresh_token_ciphertext text,
-  _access_token_expires_at timestamptz,
-  _scope text
+  _environment text
 )
-returns public.tax_authority_connections
+returns table (
+  connected boolean,
+  environment text,
+  connected_at timestamptz,
+  expires_at timestamptz,
+  scope text
+)
 language plpgsql
 security definer
 set search_path = public
 as $$
-declare v_row public.tax_authority_connections;
 begin
   if not public.has_business_role(_business_id, array['owner','admin']::public.business_role[]) then
     raise exception 'FORBIDDEN';
   end if;
 
-  insert into public.tax_authority_connections (
-    business_id, environment, access_token_ciphertext, refresh_token_ciphertext,
-    access_token_expires_at, scope, connected_by
-  )
-  values (
-    _business_id, _environment, _access_token_ciphertext, _refresh_token_ciphertext,
-    _access_token_expires_at, _scope, auth.uid()
-  )
-  on conflict (business_id, provider, environment)
-  do update set
-    access_token_ciphertext = excluded.access_token_ciphertext,
-    refresh_token_ciphertext = coalesce(excluded.refresh_token_ciphertext, public.tax_authority_connections.refresh_token_ciphertext),
-    access_token_expires_at = excluded.access_token_expires_at,
-    scope = excluded.scope,
-    connected_by = auth.uid(),
-    updated_at = now()
-  returning * into v_row;
-
-  return v_row;
+  return query
+  select
+    true,
+    c.environment,
+    c.created_at,
+    c.access_token_expires_at,
+    c.scope
+  from public.tax_authority_connections c
+  where c.business_id = _business_id
+    and c.environment = _environment
+    and c.provider = 'israel_tax_authority'
+  limit 1;
 end;
 $$;
 
-revoke all on function public.upsert_tax_authority_connection(uuid,text,text,text,timestamptz,text) from public;
-grant execute on function public.upsert_tax_authority_connection(uuid,text,text,text,timestamptz,text) to authenticated;
-
--- Ciphertexts must never be exposed through ordinary authenticated SELECT/RPC calls.
-drop policy if exists "business members can view tax authority connection metadata" on public.tax_authority_connections;
-revoke execute on function public.upsert_tax_authority_connection(uuid,text,text,text,timestamptz,text) from authenticated;
+revoke all on function public.get_tax_authority_connection_status(uuid,text) from public;
+grant execute on function public.get_tax_authority_connection_status(uuid,text) to authenticated;

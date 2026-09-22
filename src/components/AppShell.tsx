@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { FileText, LayoutDashboard, Users, Settings, Plus, LogOut } from "lucide-react";
+import { FileText, LayoutDashboard, Users, Settings, Plus, LogOut, FileSpreadsheet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const nav = [
@@ -9,6 +9,7 @@ const nav = [
   { to: "/documents", label: "מסמכים", icon: FileText },
   { to: "/clients", label: "לקוחות", icon: Users },
   { to: "/settings", label: "הגדרות עסק", icon: Settings },
+  { to: "/uniform-export", label: "מבנה אחיד", icon: FileSpreadsheet },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {

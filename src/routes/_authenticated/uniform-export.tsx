@@ -9,7 +9,7 @@ import {
   validateUniformExportText,
 } from "@/lib/uniform-format";
 
-export const Route = createFileRoute("/_authenticated/uniform-export")({
+export const Route = createFileRoute("/_authenticated/uniform-export" as any)({
   component: UniformExportPage,
 });
 
@@ -85,7 +85,7 @@ function UniformExportPage() {
   };
 
   const download = (name: string, text: string) => {
-    const blob = new Blob([toUniformDownloadBytes(text)], { type: "text/plain;charset=iso-8859-8" });
+    const blob = new Blob([toUniformDownloadBytes(text).buffer as ArrayBuffer], { type: "text/plain;charset=iso-8859-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;

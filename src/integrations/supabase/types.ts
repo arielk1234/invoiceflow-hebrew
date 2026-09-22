@@ -337,6 +337,48 @@ export type Database = {
           },
         ]
       }
+      tax_authority_connections: {
+        Row: {
+          id: string
+          business_id: string
+          provider: string
+          environment: string
+          access_token_ciphertext: string | null
+          refresh_token_ciphertext: string | null
+          access_token_expires_at: string | null
+          scope: string | null
+          connected_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          business_id: string
+          provider?: string
+          environment?: string
+          access_token_ciphertext?: string | null
+          refresh_token_ciphertext?: string | null
+          access_token_expires_at?: string | null
+          scope?: string | null
+          connected_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          business_id?: string
+          provider?: string
+          environment?: string
+          access_token_ciphertext?: string | null
+          refresh_token_ciphertext?: string | null
+          access_token_expires_at?: string | null
+          scope?: string | null
+          connected_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tax_authority_requests: {
         Row: {
           id: string
@@ -477,6 +519,19 @@ export type Database = {
       begin_tax_authority_request: {
         Args: { _document_id: string; _idempotency_key: string }
         Returns: Database["public"]["Tables"]["tax_authority_requests"]["Row"]
+      }
+      get_tax_authority_connection_status: {
+        Args: {
+          _business_id: string
+          _environment: string
+        }
+        Returns: {
+          connected: boolean
+          environment: string
+          connected_at: string
+          expires_at: string | null
+          scope: string | null
+        }[]
       }
       update_tax_authority_request: {
         Args: { _request_id: string; _status: string; _external_reference?: string | null; _response_payload?: Json | null; _error_code?: string | null; _error_message?: string | null }

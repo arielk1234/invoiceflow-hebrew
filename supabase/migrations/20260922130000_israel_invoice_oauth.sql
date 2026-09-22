@@ -74,3 +74,7 @@ $$;
 
 revoke all on function public.upsert_tax_authority_connection(uuid,text,text,text,timestamptz,text) from public;
 grant execute on function public.upsert_tax_authority_connection(uuid,text,text,text,timestamptz,text) to authenticated;
+
+-- Ciphertexts must never be exposed through ordinary authenticated SELECT/RPC calls.
+drop policy if exists "business members can view tax authority connection metadata" on public.tax_authority_connections;
+revoke execute on function public.upsert_tax_authority_connection(uuid,text,text,text,timestamptz,text) from authenticated;

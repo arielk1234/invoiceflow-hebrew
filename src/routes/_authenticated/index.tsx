@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Clock, CheckCircle2, FileEdit, Wallet } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, FileEdit, Wallet, FileSpreadsheet } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
   dateHe,
@@ -54,6 +54,24 @@ function Dashboard() {
       <p className="mt-1 text-sm text-muted-foreground">
         מבט מהיר על ההכנסות, המסמכים והתשלומים הפתוחים שלך.
       </p>
+
+      <section className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-bold text-foreground">רשות המסים — מבנה אחיד</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              הפקת INI.TXT, BKMVDATA.TXT, קובץ בדיקה לסימולטור ודוח הפקה.
+            </p>
+          </div>
+          <Link
+            to="/uniform-export"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            <FileSpreadsheet className="size-4" />
+            הפק קבצים במבנה אחיד
+          </Link>
+        </div>
+      </section>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (

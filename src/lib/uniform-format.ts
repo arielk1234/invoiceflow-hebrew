@@ -359,6 +359,7 @@ export function exportUniformFormat(input: UniformExportInput): UniformExportRes
   data.push(closing(input.business.taxId, id, total));
 
   const iniText = [
+    // INI.TXT must start with exactly one 000A record.
     ini(input.business, input.config, total, id, input.fromDate, input.toDate, generatedAt),
     summary("100B", 0),
     summary("110B", 0),
@@ -367,6 +368,9 @@ export function exportUniformFormat(input: UniformExportInput): UniformExportRes
     summary("120D", d120Count),
     summary("100M", 0),
   ].join("");
+
+  assert(iniText.startsWith("000A"), "INI_MISSING_000A");
+  assert(iniText.split(CRLF)[0].length === 466, "INI_000A_LENGTH_INVALID");
 
   return {
     iniText,
@@ -659,6 +663,7 @@ export function validateUniformExportText(result: UniformExportResult): string[]
     "000A": 466, "100A": 95, "100B": 317, "110B": 376, "100C": 444, "110D": 339, "120D": 222, "100M": 298, "900Z": 110,
   };
   if (!iniLines[0] || iniLines[0].slice(0, 4) !== "000A") errors.push("INI_MISSING_000A");
+  if (iniLines[0] && iniLines[0].length !== 466) errors.push("INI_000A_LENGTH_INVALID");
   if (!dataLines[0] || dataLines[0].slice(0, 4) !== "100A") errors.push("DATA_MISSING_100A");
   if (!dataLines[dataLines.length - 1] || dataLines[dataLines.length - 1].slice(0, 4) !== "900Z") errors.push("DATA_MISSING_900Z");
 
@@ -675,6 +680,16 @@ export function validateUniformExportText(result: UniformExportResult): string[]
   for (let i = 0; i < dataLines.length; i++) {
     if (dataLines[i].slice(4, 13) !== n(i + 1, 9)) errors.push("RECORD_SEQUENCE_" + (i + 1));
   }
+
+  const closingLine = dataLines[dataLines.length - 1];
+  if (closingLine) {
+    const declaredTotal = closingLine.slice(45, 60);
+    if (declaredTotal !== n(dataLines.length, 15)) errors.push("TOTAL_RECORD_COUNT_MISMATCH_900Z");
+  }
+
+  const iniTotal = iniLines[0]?.slice(9, 24);
+  if (iniTotal !== n(dataLines.length, 15)) errors.push("TOTAL_RECORD_COUNT_MISMATCH_000A");
+
   return errors;
 }
 

@@ -252,7 +252,7 @@ function header(
   field(r, 318, 15, amount(t.subtotal));
   field(r, 333, 15, amount(t.vat));
   field(r, 348, 15, amount(t.total));
-  field(r, 363, 12, amount(0, 11, 2));
+  field(r, 363, 12, amount(0, 9, 2));
   field(r, 375, 15, doc.clientId);
   field(r, 401, 8, date8(doc.issueDate), true);
   field(r, 425, 7, n(linkId, 7), true);
@@ -422,7 +422,7 @@ function genericHeader(
   field(r, 318, 15, amount(100));
   field(r, 333, 15, amount(18));
   field(r, 348, 15, amount(118));
-  field(r, 363, 12, amount(0, 11, 2));
+  field(r, 363, 12, amount(0, 9, 2));
   field(r, 375, 15, client.id);
   field(r, 401, 8, date8(date), true);
   field(r, 425, 7, n(linkId, 7), true);

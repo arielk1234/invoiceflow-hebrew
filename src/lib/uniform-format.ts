@@ -118,9 +118,10 @@ function amount(value: number, integerDigits = 12, decimals = 2): string {
 }
 
 function qty(value: number): string {
+  const sign = value < 0 ? "-" : "+";
   const raw = String(Math.round(Math.abs(value) * 10000)).padStart(16, "0");
   assert(raw.length === 16, "UNIFORM_QUANTITY_OVERFLOW");
-  return raw;
+  return sign + raw;
 }
 
 function docType(doc: Doc): number {
@@ -251,7 +252,7 @@ function header(
   field(r, 318, 15, amount(t.subtotal));
   field(r, 333, 15, amount(t.vat));
   field(r, 348, 15, amount(t.total));
-  field(r, 363, 12, "000000000000");
+  field(r, 363, 12, amount(0, 11, 2));
   field(r, 375, 15, doc.clientId);
   field(r, 401, 8, date8(doc.issueDate), true);
   field(r, 425, 7, n(linkId, 7), true);
@@ -359,9 +360,12 @@ export function exportUniformFormat(input: UniformExportInput): UniformExportRes
 
   const iniText = [
     ini(input.business, input.config, total, id, input.fromDate, input.toDate, generatedAt),
+    summary("100B", 0),
+    summary("110B", 0),
     summary("100C", cCount),
     summary("110D", dCount),
     summary("120D", d120Count),
+    summary("100M", 0),
   ].join("");
 
   return {
@@ -423,7 +427,7 @@ export function validateUniformExportText(result: UniformExportResult): string[]
   const iniLines = result.iniText.split(CRLF).filter(Boolean);
   const dataLines = result.bkmvdataText.split(CRLF).filter(Boolean);
   const lengths: Record<string, number> = {
-    "000A": 466, "100A": 95, "100C": 444, "110D": 339, "120D": 222, "900Z": 110,
+    "000A": 466, "100A": 95, "100B": 317, "110B": 376, "100C": 444, "110D": 339, "120D": 222, "100M": 298, "900Z": 110,
   };
   if (!iniLines[0] || iniLines[0].slice(0, 4) !== "000A") errors.push("INI_MISSING_000A");
   if (!dataLines[0] || dataLines[0].slice(0, 4) !== "100A") errors.push("DATA_MISSING_100A");

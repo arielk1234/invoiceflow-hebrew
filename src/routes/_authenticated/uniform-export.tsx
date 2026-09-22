@@ -126,13 +126,23 @@ function UniformExportPage() {
             <p className="mt-3">מספר עוסק מורשה: {report.businessTaxId}</p>
             <p>שם בית העסק: {report.businessName}</p>
             <p>טווח: {report.fromDate} עד {report.toDate}</p>
-            <p className="mt-3">מלל קבוע: ביצוע ממשק פתוח הסתיים בהצלחה.</p>
+            <p className="mt-3">מלל קבוע: ביצוע ממשק פתוח הסתיים בהצלחה.</p><p>נתיב לוגי לפי ההנחיות: OPENFRMT\\{report.businessTaxId.slice(0, 8)}.{String(new Date(report.generatedAt).getFullYear()).slice(-2)}</p>
 
             <table className="mt-6 w-full border-collapse text-sm">
               <thead><tr><th className="border p-2 text-right">קוד</th><th className="border p-2 text-right">תיאור</th><th className="border p-2 text-right">סך רשומות</th><th className="border p-2 text-right">סך כספי</th></tr></thead>
               <tbody>
                 {Object.entries(result.recordCounts).map(([code, count]) => (
                   <tr key={code}><td className="border p-2">{code}</td><td className="border p-2">{code}</td><td className="border p-2">{count}</td><td className="border p-2">—</td></tr>
+                ))}
+              </tbody>
+            </table>
+
+            <h3 className="mt-8 text-lg font-bold">פירוט סוגי המסמכים</h3>
+            <table className="mt-3 w-full border-collapse text-sm">
+              <thead><tr><th className="border p-2 text-right">מספר המסמך</th><th className="border p-2 text-right">סוג המסמך</th><th className="border p-2 text-right">סה"כ כמותי</th><th className="border p-2 text-right">סה"כ כספי (₪)</th></tr></thead>
+              <tbody>
+                {report.documents.map(row => (
+                  <tr key={row.code}><td className="border p-2">{row.code}</td><td className="border p-2">{row.description}</td><td className="border p-2">{row.count}</td><td className="border p-2">{row.total.toFixed(2)}</td></tr>
                 ))}
               </tbody>
             </table>

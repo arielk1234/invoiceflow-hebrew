@@ -1,3 +1,32 @@
+create table if not exists public.tax_authority_requests (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses(id) on delete cascade,
+  document_id uuid not null references public.documents(id) on delete cascade,
+  request_kind text not null,
+  idempotency_key text not null,
+  status text not null default 'pending',
+  external_reference text,
+  response_payload jsonb,
+  error_code text,
+  error_message text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (business_id, idempotency_key)
+);
+
+create index if not exists tax_authority_requests_business_document_idx
+  on public.tax_authority_requests (business_id, document_id, created_at desc);
+
+alter table public.tax_authority_requests enable row level security;
+
+drop policy if exists "business members can view tax authority requests" on public.tax_authority_requests;
+create policy "business members can view tax authority requests"
+on public.tax_authority_requests
+for select to authenticated
+using (public.is_business_member(business_id));
+
+grant select on public.tax_authority_requests to authenticated;
+
 -- Tax Authority request ledger helpers.
 -- These SECURITY DEFINER functions keep request-state transitions server-controlled
 -- while preserving business membership isolation.

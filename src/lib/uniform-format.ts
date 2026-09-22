@@ -519,7 +519,7 @@ function syntheticB100(business: BusinessInfo, recordNo: number, transactionNo: 
   field(r, 204, 3, "ILS");
   field(r, 207, 15, amount(100));
   field(r, 222, 15, amount(0));
-  field(r, 237, 12, qty(1));
+  field(r, 237, 12, n(1, 12), true);
   field(r, 276, 8, "20260922", true);
   return line(r);
 }
@@ -534,9 +534,9 @@ function syntheticM100(business: BusinessInfo, recordNo: number, itemNo: number)
   field(r, 83, 20, "INT" + n(itemNo, 17));
   field(r, 103, 50, "פריט סימולציה " + itemNo);
   field(r, 173, 20, "יחידה");
-  field(r, 193, 12, qty(10).slice(1), true);
-  field(r, 205, 12, qty(20).slice(1), true);
-  field(r, 217, 12, qty(5).slice(1), true);
+  field(r, 193, 12, n(10, 12), true);
+  field(r, 205, 12, n(20, 12), true);
+  field(r, 217, 12, n(5, 12), true);
   field(r, 229, 10, "0000000100", true);
   return line(r);
 }

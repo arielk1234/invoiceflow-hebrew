@@ -386,6 +386,235 @@ export function exportUniformFormat(input: UniformExportInput): UniformExportRes
   };
 }
 
+
+export type SimulatorFixtureResult = UniformExportResult & {
+  simulatorRecords: number;
+  simulatorBytes: number;
+  documentTypesCovered: number[];
+};
+
+function genericHeader(
+  business: BusinessInfo,
+  client: Client,
+  code: number,
+  number: string,
+  recordNo: number,
+  linkId: number,
+  date: string,
+): string {
+  const r = blank(444);
+  field(r, 1, 4, "100C");
+  field(r, 5, 9, n(recordNo, 9), true);
+  field(r, 14, 9, business.taxId, true);
+  field(r, 23, 3, n(code, 3), true);
+  field(r, 26, 20, docNumber(number));
+  field(r, 46, 8, date8(date), true);
+  field(r, 54, 4, "1200", true);
+  field(r, 58, 50, client.name);
+  field(r, 108, 50, client.address || "");
+  field(r, 206, 30, "");
+  field(r, 236, 2, "IL");
+  field(r, 238, 15, client.phone || "");
+  if (client.taxId) field(r, 253, 9, n(client.taxId, 9), true);
+  field(r, 262, 8, date8(date), true);
+  field(r, 288, 15, amount(100));
+  field(r, 303, 15, amount(0));
+  field(r, 318, 15, amount(100));
+  field(r, 333, 15, amount(18));
+  field(r, 348, 15, amount(118));
+  field(r, 363, 12, amount(0, 11, 2));
+  field(r, 375, 15, client.id);
+  field(r, 401, 8, date8(date), true);
+  field(r, 425, 7, n(linkId, 7), true);
+  return line(r);
+}
+
+function genericDetail(
+  business: BusinessInfo,
+  code: number,
+  number: string,
+  recordNo: number,
+  rowNo: number,
+  linkId: number,
+  date: string,
+): string {
+  const r = blank(339);
+  field(r, 1, 4, "110D");
+  field(r, 5, 9, n(recordNo, 9), true);
+  field(r, 14, 9, business.taxId, true);
+  field(r, 23, 3, n(code, 3), true);
+  field(r, 26, 20, docNumber(number));
+  field(r, 46, 4, n(rowNo, 4), true);
+  field(r, 73, 1, "1", true);
+  field(r, 74, 20, "SIM-" + code + "-" + rowNo);
+  field(r, 94, 30, "פריט בדיקה " + code);
+  field(r, 204, 20, "יחידה");
+  field(r, 224, 17, qty(1));
+  field(r, 241, 15, amount(100));
+  field(r, 256, 15, amount(0));
+  field(r, 271, 15, amount(100));
+  field(r, 286, 4, "1800", true);
+  field(r, 297, 8, date8(date), true);
+  field(r, 305, 7, n(linkId, 7), true);
+  return line(r);
+}
+
+function genericReceiptDetail(
+  business: BusinessInfo,
+  code: number,
+  number: string,
+  recordNo: number,
+  linkId: number,
+  date: string,
+): string {
+  const r = blank(222);
+  field(r, 1, 4, "120D");
+  field(r, 5, 9, n(recordNo, 9), true);
+  field(r, 14, 9, business.taxId, true);
+  field(r, 23, 3, n(code, 3), true);
+  field(r, 26, 20, docNumber(number));
+  field(r, 46, 4, "1", true);
+  field(r, 50, 1, "1", true);
+  field(r, 96, 8, date8(date), true);
+  field(r, 104, 15, amount(118));
+  field(r, 148, 8, date8(date), true);
+  field(r, 156, 7, n(linkId, 7), true);
+  return line(r);
+}
+
+function syntheticB110(business: BusinessInfo, recordNo: number, accountNo: number): string {
+  const r = blank(376);
+  field(r, 1, 4, "110B");
+  field(r, 5, 9, n(recordNo, 9), true);
+  field(r, 14, 9, business.taxId, true);
+  const key = "SIMACC" + n(accountNo, 9);
+  field(r, 23, 15, key);
+  field(r, 38, 50, "חשבון סימולציה " + accountNo);
+  field(r, 88, 15, "SIM");
+  field(r, 103, 30, "חשבון בדיקה");
+  field(r, 231, 30, "ישראל");
+  field(r, 261, 2, "IL");
+  field(r, 278, 15, amount(0));
+  field(r, 293, 15, amount(0));
+  field(r, 308, 15, amount(0));
+  return line(r);
+}
+
+function syntheticB100(business: BusinessInfo, recordNo: number, transactionNo: number, rowNo: number, accountNo: number): string {
+  const r = blank(317);
+  field(r, 1, 4, "100B");
+  field(r, 5, 9, n(recordNo, 9), true);
+  field(r, 14, 9, business.taxId, true);
+  field(r, 23, 10, n(transactionNo, 10), true);
+  field(r, 33, 5, n(rowNo, 5), true);
+  field(r, 38, 8, n(transactionNo, 8), true);
+  field(r, 46, 15, "SIMULATION");
+  field(r, 61, 20, "SIM-" + transactionNo);
+  field(r, 107, 50, "תנועת בדיקה");
+  field(r, 157, 8, "20260922", true);
+  field(r, 165, 8, "20260922", true);
+  field(r, 173, 15, "SIMACC" + n(accountNo, 9));
+  field(r, 188, 15, "SIMACC" + n(accountNo + 1, 9));
+  field(r, 203, 1, rowNo % 2 ? "1" : "2", true);
+  field(r, 204, 3, "ILS");
+  field(r, 207, 15, amount(100));
+  field(r, 222, 15, amount(0));
+  field(r, 237, 12, qty(1));
+  field(r, 276, 8, "20260922", true);
+  return line(r);
+}
+
+function syntheticM100(business: BusinessInfo, recordNo: number, itemNo: number): string {
+  const r = blank(298);
+  field(r, 1, 4, "100M");
+  field(r, 5, 9, n(recordNo, 9), true);
+  field(r, 14, 9, business.taxId, true);
+  field(r, 23, 20, "SIMITEM" + n(itemNo, 12));
+  field(r, 63, 20, "SIMITEM" + n(itemNo, 12));
+  field(r, 83, 20, "INT" + n(itemNo, 17));
+  field(r, 103, 50, "פריט סימולציה " + itemNo);
+  field(r, 173, 20, "יחידה");
+  field(r, 193, 12, qty(10).slice(1), true);
+  field(r, 205, 12, qty(20).slice(1), true);
+  field(r, 217, 12, qty(5).slice(1), true);
+  field(r, 229, 10, "0000000100", true);
+  return line(r);
+}
+
+export function buildSimulatorFixture(input: UniformExportInput): SimulatorFixtureResult {
+  assert(/^\d{9}$/.test(input.business.taxId), "BUSINESS_TAX_ID_MUST_BE_9_DIGITS");
+  const configErrors = validateUniformExportConfig(input.config);
+  assert(configErrors.length === 0, configErrors.join(","));
+  const generatedAt = input.generatedAt || new Date();
+  const id = primaryId();
+  const codes = [
+    100, 200, 205, 210, 300, 305, 310, 320, 330, 340, 345, 400, 405,
+    410, 420, 500, 600, 610, 700, 710, 800, 810, 820, 830, 840, 900, 910,
+  ];
+  const client: Client = input.clients[0] || {
+    id: "SIMCLIENT",
+    name: "לקוח סימולציה",
+    taxId: "123456782",
+    isVatRegistered: true,
+  };
+  const data: string[] = [];
+  let seq = 1;
+  const counts: Record<string, number> = { "100A": 1, "100B": 0, "110B": 0, "100C": 0, "110D": 0, "120D": 0, "100M": 0, "900Z": 1 };
+  data.push(opening(input.business.taxId, id));
+
+  for (const code of codes) {
+    for (let i = 1; i <= 10; i++) {
+      const linkId = seq + 1;
+      const number = "SIM" + String(code) + String(i).padStart(4, "0");
+      data.push(genericHeader(input.business, client, code, number, ++seq, linkId, "2026-09-22"));
+      counts["100C"]++;
+      data.push(genericDetail(input.business, code, number, ++seq, 1, linkId, "2026-09-22"));
+      counts["110D"]++;
+      if (code === 400 || code === 405) {
+        data.push(genericReceiptDetail(input.business, code, number, ++seq, linkId, "2026-09-22"));
+        counts["120D"]++;
+      }
+    }
+  }
+
+  for (let i = 1; i <= 600; i++) {
+    data.push(syntheticB110(input.business, ++seq, i));
+    counts["110B"]++;
+  }
+  for (let i = 1; i <= 900; i++) {
+    data.push(syntheticB100(input.business, ++seq, i, (i % 3) + 1, (i % 600) + 1));
+    counts["100B"]++;
+  }
+  for (let i = 1; i <= 200; i++) {
+    data.push(syntheticM100(input.business, ++seq, i));
+    counts["100M"]++;
+  }
+
+  data.push(closing(input.business.taxId, id, data.length + 1));
+  const total = data.length;
+  const iniText = [
+    ini(input.business, input.config, total, id, input.fromDate, input.toDate, generatedAt),
+    summary("100B", counts["100B"]),
+    summary("110B", counts["110B"]),
+    summary("100C", counts["100C"]),
+    summary("110D", counts["110D"]),
+    summary("120D", counts["120D"]),
+    summary("100M", counts["100M"]),
+  ].join("");
+  const result: UniformExportResult = {
+    iniText,
+    bkmvdataText: data.join(""),
+    recordCounts: counts,
+    primaryId: id,
+    generatedAt,
+  };
+  const bytes = toUniformDownloadBytes(result.bkmvdataText).byteLength;
+  const validation = validateUniformExportText(result);
+  validation.push(...validateSimulatorPayload(bytes, total));
+  assert(validation.length === 0, validation.join(","));
+  return { ...result, simulatorRecords: total, simulatorBytes: bytes, documentTypesCovered: codes };
+}
+
 export type UniformPrintReportRow = { code: number; description: string; count: number; total: number };
 
 export function buildUniformPrintReport(input: UniformExportInput, result: UniformExportResult) {

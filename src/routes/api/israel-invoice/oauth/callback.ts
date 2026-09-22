@@ -8,7 +8,7 @@ function required(name: string) {
   return value;
 }
 
-export const Route = createFileRoute("/api/israel-invoice/oauth/callback")({
+export const Route = createFileRoute("/api/israel-invoice/oauth/callback" as any)({
   server: {
     handlers: {
       GET: async ({ request }) => {

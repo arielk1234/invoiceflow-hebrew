@@ -1,42 +1,36 @@
 /**
- * Israel Tax Authority - Israel Invoice allocation API boundary (Approval V2).
+ * Israel Tax Authority — Israel Invoice allocation API contract.
  *
- * Official production endpoint documented by the Tax Authority:
- * https://openapi.taxes.gov.il/shaam/production/Invoices/v2/Approval
+ * Based on the official Tax Authority "Israel Invoice Model" API document:
+ * Invoice-Information/confirmationNumber (V1.0 beta).
  *
- * Authentication is OAuth2 User Restricted. Tokens/secrets must stay server-side.
- * This module contains the contract and endpoint only; it does not invent an
- * authentication flow or expose credentials to the browser.
+ * The official document specifies OAuth2 User Restricted and these endpoints:
+ * Sandbox: https://ita-api.taxes.gov.il/shaam/tsandbox/invoice-information/v1/confirmationNumber
+ * Production: https://openapi.taxes.gov.il/shaam/production/invoice-information/v1/confirmationNumber
+ *
+ * Source: https://www.gov.il/BlobFolder/generalpage/hor-software-other/he/vat_software-houses-180724.pdf
  */
 
 import { allocationThresholdForDate } from "./israel-compliance";
 
 export const ISRAEL_INVOICE_API_PRODUCTION_URL =
-  "https://openapi.taxes.gov.il/shaam/production/Invoices/v2/Approval";
+  "https://openapi.taxes.gov.il/shaam/production/invoice-information/v1/confirmationNumber";
 
 export const ISRAEL_INVOICE_API_SANDBOX_URL =
-  "https://openapi.taxes.gov.il/shaam/tsandbox/Invoices/v2/Approval";
+  "https://ita-api.taxes.gov.il/shaam/tsandbox/invoice-information/v1/confirmationNumber";
 
 export type AllocationRequest = {
-  invoice_id: string;
-  invoice_type: number;
-  vat_number: string;
-  customer_vat_number: string;
-  customer_name: string;
-  invoice_date: string;
-  invoice_issuance_date: string;
-  payment_amount: number;
-  vat_amount: number;
-  payment_amount_including_vat: number;
-  invoice_reference_number: string;
+  Customer_VAT_Number: string;
+  Vat_Number: string;
+  Payment_Amount: number;
+  VAT_Amount: number;
+  Invoice_Date: string;
+  Invoice_Reference_Number?: string;
 };
 
 export type AllocationResponse = {
-  Confirmation_Number?: string;
-  invoice_id?: string;
-  confirmation_number?: string;
-  approved?: boolean;
-  Invoice_ID?: string;
+  Confirmation_Number?: string | number;
+  confirmation_number?: string | number;
   [key: string]: unknown;
 };
 
@@ -56,37 +50,38 @@ export function shouldRequestAllocation(input: {
 }
 
 export function buildAllocationRequest(input: {
-  invoiceId: string;
-  invoiceType: number;
   customerVatNumber: string;
   issuerVatNumber: string;
-  customerName: string;
   subtotalBeforeVat: number;
   vatAmount: number;
-  totalAmount: number;
   issueDate: string;
-  invoiceNumber: string;
+  invoiceNumber?: string;
 }): AllocationRequest {
+  const customerVatNumber = String(input.customerVatNumber).trim();
+  const issuerVatNumber = String(input.issuerVatNumber).trim();
+
+  if (!/^\d{9}$/.test(customerVatNumber)) {
+    throw new Error("INVALID_CUSTOMER_VAT_NUMBER");
+  }
+  if (!/^\d{9}$/.test(issuerVatNumber)) {
+    throw new Error("INVALID_ISSUER_VAT_NUMBER");
+  }
+
   return {
-    invoice_id: input.invoiceId,
-    invoice_type: input.invoiceType,
-    vat_number: input.issuerVatNumber,
-    customer_vat_number: input.customerVatNumber,
-    customer_name: input.customerName,
-    invoice_date: input.issueDate,
-    invoice_issuance_date: input.issueDate,
-    payment_amount: Number(input.subtotalBeforeVat.toFixed(2)),
-    vat_amount: Number(input.vatAmount.toFixed(2)),
-    payment_amount_including_vat: Number(input.totalAmount.toFixed(2)),
-    invoice_reference_number: input.invoiceNumber,
+    Customer_VAT_Number: customerVatNumber,
+    Vat_Number: issuerVatNumber,
+    Payment_Amount: Number(input.subtotalBeforeVat.toFixed(2)),
+    VAT_Amount: Number(input.vatAmount.toFixed(2)),
+    Invoice_Date: input.issueDate,
+    ...(input.invoiceNumber ? { Invoice_Reference_Number: input.invoiceNumber } : {}),
   };
 }
-
 
 export function parseAllocationResponse(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") return null;
   const response = payload as AllocationResponse;
-  const value = response.confirmation_number ?? response.Confirmation_Number;
-  if (typeof value !== "string" || value === "0" || !/^\d+$/.test(value)) return null;
-  return value.length >= 9 ? value.slice(-9) : null;
+  const raw = response.Confirmation_Number ?? response.confirmation_number;
+  const value = typeof raw === "number" ? String(raw) : raw;
+  if (!value || !/^\d{9}$/.test(value)) return null;
+  return value;
 }

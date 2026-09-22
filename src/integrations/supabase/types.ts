@@ -417,6 +417,10 @@ export type Database = {
         }
         Returns: string
       }
+      reserve_document_number: {
+        Args: { _document_id: string }
+        Returns: string
+      }
       issue_document: {
         Args: { _document_id: string }
         Returns: Database["public"]["Tables"]["documents"]["Row"]

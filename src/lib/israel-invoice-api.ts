@@ -12,7 +12,7 @@
 import { allocationThresholdForDate } from "./israel-compliance";
 
 export const ISRAEL_INVOICE_API_PRODUCTION_URL =
-  "https://openapi.taxes.gov.il/shaam/production/invoice-information/v1/confirmationNumber";
+  "https://openapi.taxes.gov.il/shaam/production/Invoices/v2/Approval";
 
 export const ISRAEL_INVOICE_API_SANDBOX_URL =
   "https://ita-api.taxes.gov.il/shaam/tsandbox/Invoices/v2/Approval";
@@ -82,3 +82,11 @@ export function buildAllocationRequest(input: {
   };
 }
 
+
+export function parseAllocationResponse(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const response = payload as AllocationResponse;
+  const value = response.confirmation_number ?? response.Confirmation_Number;
+  if (typeof value !== "string" || value === "0" || !/^\\d+$/.test(value)) return null;
+  return value.length >= 9 ? value.slice(-9) : null;
+}

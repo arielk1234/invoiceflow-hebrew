@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useData } from "@/lib/store";
 import {
   buildUniformPrintReport,
+  buildSimulatorFixture,
   exportUniformFormat,
   toUniformDownloadBytes,
   validateUniformExportText,
@@ -19,6 +20,7 @@ function UniformExportPage() {
   const [toDate, setToDate] = useState(today);
   const [error, setError] = useState("");
   const [result, setResult] = useState<ReturnType<typeof exportUniformFormat> | null>(null);
+  const [simulator, setSimulator] = useState<ReturnType<typeof buildSimulatorFixture> | null>(null);
 
   const config = useMemo(() => ({
     registrationNumber: import.meta.env.VITE_UNIFORM_SOFTWARE_REGISTRATION_NUMBER || "",
@@ -53,9 +55,32 @@ function UniformExportPage() {
       const errors = validateUniformExportText(next);
       if (errors.length) throw new Error(`אימות מבני נכשל: ${errors.join(", ")}`);
       setResult(next);
+      setSimulator(null);
     } catch (e) {
       setResult(null);
       setError(e instanceof Error ? e.message : "שגיאה בהפקת הקובץ");
+    }
+  };
+
+  const generateSimulator = () => {
+    setError("");
+    try {
+      if (!/^\d{8}$/.test(config.registrationNumber)) throw new Error("יש להגדיר מספר תעודת רישום תוכנה בן 8 ספרות.");
+      if (!/^\d{9}$/.test(config.manufacturerTaxId)) throw new Error("יש להגדיר מספר עוסק מורשה של יצרן התוכנה בן 9 ספרות.");
+      if (!config.manufacturerName) throw new Error("יש להגדיר שם יצרן תוכנה.");
+      const next = buildSimulatorFixture({
+        business: data.business,
+        clients: data.clients,
+        docs: [],
+        config,
+        fromDate,
+        toDate,
+      });
+      setSimulator(next);
+      setResult(null);
+    } catch (e) {
+      setSimulator(null);
+      setError(e instanceof Error ? e.message : "שגיאה בהפקת קובץ הסימולטור");
     }
   };
 
@@ -103,10 +128,18 @@ function UniformExportPage() {
 
         {error && <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">{error}</div>}
 
-        <button onClick={generate} className="mt-6 rounded-lg bg-primary px-5 py-2 text-primary-foreground">
-          הפק קבצים
-        </button>
+        <div className="mt-6 flex flex-wrap gap-3"><button onClick={generate} className="rounded-lg bg-primary px-5 py-2 text-primary-foreground">הפק קבצים</button><button onClick={generateSimulator} className="rounded-lg border px-5 py-2">הפק קובץ בדיקה לסימולטור</button></div>
       </section>
+
+      {simulator && (
+        <section className="rounded-2xl border bg-background p-6 shadow-sm">
+          <h2 className="text-xl font-bold">קובץ בדיקה לסימולטור רשות המסים</h2>
+          <p className="mt-2 text-sm text-muted-foreground">נוצר קובץ 1.31 סינתטי לבדיקת מבנה בלבד, הכולל את כל סוגי המסמכים שבנספח 1, רשומות הנהלת חשבונות ומלאי.</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-3 text-sm"><div>רשומות: <b>{simulator.simulatorRecords}</b></div><div>גודל: <b>{(simulator.simulatorBytes / 1024).toFixed(1)} KB</b></div><div>סוגי מסמכים: <b>{simulator.documentTypesCovered.length}</b></div></div>
+          <button onClick={() => download("BKMVDATA-SIMULATOR-1.31.TXT", simulator.bkmvdataText)} className="mt-5 rounded-lg bg-primary px-4 py-2 text-primary-foreground">הורד קובץ לסימולטור</button>
+          <p className="mt-3 text-xs text-muted-foreground">הסימולטור הרשמי מקבל קובץ בגרסה 1.31 עם לפחות 2,000 רשומות ועד 4MB. לאחר הבדיקה יש לשמור את קובץ תוצאת הסימולטור לצורך ההגשה.</p>
+        </section>
+      )}
 
       {result && report && (
         <>

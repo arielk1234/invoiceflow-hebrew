@@ -131,7 +131,6 @@ export type Database = {
           name: string
           phone: string
           tax_id: string
-          is_vat_registered: boolean
           updated_at: string
         }
         Insert: {
@@ -143,7 +142,6 @@ export type Database = {
           name?: string
           phone?: string
           tax_id?: string
-          is_vat_registered?: boolean
           updated_at?: string
         }
         Update: {
@@ -155,7 +153,6 @@ export type Database = {
           name?: string
           phone?: string
           tax_id?: string
-          is_vat_registered?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -238,27 +235,17 @@ export type Database = {
       documents: {
         Row: {
           business_id: string
-          cancel_reason: string | null
           cancelled_at: string | null
           client_id: string
-          content_hash: string | null
           created_at: string
           created_by: string | null
           due_date: string
           id: string
           issue_date: string
           issued_at: string | null
-          issued_by: string | null
           notes: string
           number: string
           payment_method: string
-          related_document_id: string | null
-          allocation_requested: boolean
-          allocation_number: string | null
-          allocation_requested_at: string | null
-          subtotal: number
-          vat_amount: number
-          total_amount: number
           status: Database["public"]["Enums"]["doc_status"]
           type: Database["public"]["Enums"]["doc_type"]
           updated_at: string
@@ -266,27 +253,17 @@ export type Database = {
         }
         Insert: {
           business_id: string
-          cancel_reason?: string | null
           cancelled_at?: string | null
           client_id: string
-          content_hash?: string | null
           created_at?: string
           created_by?: string | null
           due_date?: string
           id?: string
           issue_date?: string
           issued_at?: string | null
-          issued_by?: string | null
           notes?: string
           number?: string
           payment_method?: string
-          related_document_id?: string | null
-          allocation_requested?: boolean
-          allocation_number?: string | null
-          allocation_requested_at?: string | null
-          subtotal?: number
-          vat_amount?: number
-          total_amount?: number
           status?: Database["public"]["Enums"]["doc_status"]
           type?: Database["public"]["Enums"]["doc_type"]
           updated_at?: string
@@ -294,27 +271,17 @@ export type Database = {
         }
         Update: {
           business_id?: string
-          cancel_reason?: string | null
           cancelled_at?: string | null
           client_id?: string
-          content_hash?: string | null
           created_at?: string
           created_by?: string | null
           due_date?: string
           id?: string
           issue_date?: string
           issued_at?: string | null
-          issued_by?: string | null
           notes?: string
           number?: string
           payment_method?: string
-          related_document_id?: string | null
-          allocation_requested?: boolean
-          allocation_number?: string | null
-          allocation_requested_at?: string | null
-          subtotal?: number
-          vat_amount?: number
-          total_amount?: number
           status?: Database["public"]["Enums"]["doc_status"]
           type?: Database["public"]["Enums"]["doc_type"]
           updated_at?: string
@@ -336,93 +303,6 @@ export type Database = {
             referencedColumns: ["id", "business_id"]
           },
         ]
-      }
-      tax_authority_connections: {
-        Row: {
-          id: string
-          business_id: string
-          provider: string
-          environment: string
-          access_token_ciphertext: string | null
-          refresh_token_ciphertext: string | null
-          access_token_expires_at: string | null
-          scope: string | null
-          connected_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          business_id: string
-          provider?: string
-          environment?: string
-          access_token_ciphertext?: string | null
-          refresh_token_ciphertext?: string | null
-          access_token_expires_at?: string | null
-          scope?: string | null
-          connected_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          business_id?: string
-          provider?: string
-          environment?: string
-          access_token_ciphertext?: string | null
-          refresh_token_ciphertext?: string | null
-          access_token_expires_at?: string | null
-          scope?: string | null
-          connected_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      tax_authority_requests: {
-        Row: {
-          id: string
-          business_id: string
-          document_id: string
-          request_kind: string
-          idempotency_key: string
-          status: string
-          external_reference: string | null
-          response_payload: Json | null
-          error_code: string | null
-          error_message: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          business_id: string
-          document_id: string
-          request_kind: string
-          idempotency_key: string
-          status?: string
-          external_reference?: string | null
-          response_payload?: Json | null
-          error_code?: string | null
-          error_message?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          business_id?: string
-          document_id?: string
-          request_kind?: string
-          idempotency_key?: string
-          status?: string
-          external_reference?: string | null
-          response_payload?: Json | null
-          error_code?: string | null
-          error_message?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
       }
       profiles: {
         Row: {
@@ -500,49 +380,15 @@ export type Database = {
         Args: {
           _business_id: string
           _type: Database["public"]["Enums"]["doc_type"]
-          _year?: number
         }
         Returns: string
-      }
-      reserve_document_number: {
-        Args: { _document_id: string }
-        Returns: string
-      }
-      issue_document: {
-        Args: { _document_id: string }
-        Returns: Database["public"]["Tables"]["documents"]["Row"]
-      }
-      calculate_document_totals: {
-        Args: { p_document_id: string }
-        Returns: { subtotal: number; vat_amount: number; total_amount: number }[]
-      }
-      begin_tax_authority_request: {
-        Args: { _document_id: string; _idempotency_key: string }
-        Returns: Database["public"]["Tables"]["tax_authority_requests"]["Row"]
-      }
-      get_tax_authority_connection_status: {
-        Args: {
-          _business_id: string
-          _environment: string
-        }
-        Returns: {
-          connected: boolean
-          environment: string
-          connected_at: string
-          expires_at: string | null
-          scope: string | null
-        }[]
-      }
-      update_tax_authority_request: {
-        Args: { _request_id: string; _status: string; _external_reference?: string | null; _response_payload?: Json | null; _error_code?: string | null; _error_message?: string | null }
-        Returns: Database["public"]["Tables"]["tax_authority_requests"]["Row"]
       }
     }
     Enums: {
       business_role: "owner" | "admin" | "user"
       business_type: "osek_patur" | "osek_murshe" | "company"
       doc_status: "draft" | "issued" | "sent" | "paid" | "cancelled"
-      doc_type: "invoice" | "receipt" | "credit_note"
+      doc_type: "invoice" | "receipt"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -673,7 +519,7 @@ export const Constants = {
       business_role: ["owner", "admin", "user"],
       business_type: ["osek_patur", "osek_murshe", "company"],
       doc_status: ["draft", "issued", "sent", "paid", "cancelled"],
-      doc_type: ["invoice", "receipt", "credit_note"],
+      doc_type: ["invoice", "receipt"],
     },
   },
 } as const

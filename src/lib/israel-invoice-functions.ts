@@ -7,6 +7,7 @@ import {
   parseAllocationResponse,
 } from "./israel-invoice-api";
 import { requiresAllocationNumber } from "./israel-compliance";
+import { decryptSecret, encryptSecret, refreshAccessToken } from "./israel-invoice-oauth";
 
 const inputSchema = z.object({
   documentId: z.string().uuid(),
@@ -119,15 +120,42 @@ export const requestIsraelAllocation = createServerFn({ method: "POST" })
       throw new Error("ALLOCATION_REQUEST_AMBIGUOUS_RETRY_BLOCKED");
     }
 
-    const accessTokenForTaxAuthority = process.env.ISRAEL_INVOICE_API_ACCESS_TOKEN;
-    if (!accessTokenForTaxAuthority) {
+    const admin = createClient<Database>(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
+
+    const environment = (process.env.ISRAEL_INVOICE_API_ENVIRONMENT || "sandbox") as "sandbox" | "production";
+    const { data: connection, error: connectionError } = await admin
+      .from("tax_authority_connections")
+      .select("*")
+      .eq("business_id", document.business_id)
+      .eq("environment", environment)
+      .single();
+
+    if (connectionError || !connection?.access_token_ciphertext) {
       await supabase.rpc("update_tax_authority_request", {
         _request_id: requestRow.id,
         _status: "failed",
-        _error_code: "API_NOT_CONFIGURED",
-        _error_message: "ISRAEL_INVOICE_API_ACCESS_TOKEN is not configured",
+        _error_code: "OAUTH_NOT_CONNECTED",
+        _error_message: "Tax Authority OAuth connection is not configured for this business",
       });
-      throw new Error("ISRAEL_INVOICE_API_NOT_CONFIGURED");
+      throw new Error("ISRAEL_INVOICE_OAUTH_NOT_CONNECTED");
+    }
+
+    let accessTokenForTaxAuthority = decryptSecret(connection.access_token_ciphertext);
+    if (!connection.access_token_expires_at || new Date(connection.access_token_expires_at).getTime() <= Date.now() + 60_000) {
+      if (!connection.refresh_token_ciphertext) throw new Error("ISRAEL_INVOICE_REFRESH_TOKEN_MISSING");
+      const refreshed = await refreshAccessToken(environment, decryptSecret(connection.refresh_token_ciphertext));
+      accessTokenForTaxAuthority = refreshed.access_token;
+      await admin.from("tax_authority_connections").update({
+        access_token_ciphertext: encryptSecret(refreshed.access_token),
+        refresh_token_ciphertext: refreshed.refresh_token ? encryptSecret(refreshed.refresh_token) : connection.refresh_token_ciphertext,
+        access_token_expires_at: new Date(Date.now() + Number(refreshed.expires_in ?? 1800) * 1000).toISOString(),
+        scope: refreshed.scope ?? connection.scope,
+        updated_at: new Date().toISOString(),
+      }).eq("id", connection.id);
     }
 
     const requestBody = buildAllocationRequest({
@@ -150,7 +178,9 @@ export const requestIsraelAllocation = createServerFn({ method: "POST" })
 
     const endpoint =
       process.env.ISRAEL_INVOICE_API_BASE_URL ||
-      "https://ita-api.taxes.gov.il/shaam/tsandbox/Invoices/v2/Approval";
+      (environment === "production"
+        ? "https://openapi.taxes.gov.il/shaam/production/Invoices/v2/Approval"
+        : "https://openapi.taxes.gov.il/shaam/tsandbox/Invoices/v2/Approval");
 
     let response: Response;
     try {

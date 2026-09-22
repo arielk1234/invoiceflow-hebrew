@@ -200,6 +200,7 @@ function ini(
   if (config.accountingBalanceLevel) field(r, 186, 1, String(config.accountingBalanceLevel), true);
   if (config.companyNumber) field(r, 187, 9, n(config.companyNumber, 9), true);
   if (config.withholdingFileNumber) field(r, 196, 9, n(config.withholdingFileNumber, 9), true);
+  field(r, 135, 50, "OPENFRMT");
   field(r, 215, 50, business.name);
   field(r, 265, 50, business.address);
   if ((config.softwareType || 2) === 1) field(r, 363, 4, fromDate.slice(0, 4), true);
@@ -376,6 +377,42 @@ export function exportUniformFormat(input: UniformExportInput): UniformExportRes
     },
     primaryId: id,
     generatedAt,
+  };
+}
+
+export type UniformPrintReportRow = { code: number; description: string; count: number; total: number };
+
+export function buildUniformPrintReport(input: UniformExportInput, result: UniformExportResult) {
+  const docs = input.docs.filter(d => d.issueDate >= input.fromDate && d.issueDate <= input.toDate && d.status !== "draft");
+  const definitions: Array<[number, string]> = [
+    [100, "הזמנה"], [200, "תעודת משלוח"], [205, "תעודת משלוח סוכן"], [210, "תעודת החזרה"],
+    [300, "חשבונית/חשבונית עסקה"], [305, "חשבונית-מס"], [310, "חשבונית ריכוז"], [320, "חשבונית מס / קבלה"],
+    [330, "חשבונית מס זיכוי"], [340, "חשבונית שריון"], [345, "חשבונית סוכן"], [400, "קבלה"],
+    [405, "קבלה על תרומות"], [410, "יציאה מקופה"], [420, "הפקדת בנק"], [500, "הזמנת רכש"],
+    [600, "תעודת משלוח רכש"], [610, "החזרת רכש"], [700, "חשבונית מס רכש"], [710, "זיכוי רכש"],
+    [800, "יתרת פתיחה"], [810, "כניסה כללית למלאי"], [820, "יציאה כללית מהמלאי"], [830, "העברה בין מחסנים"],
+    [840, "עדכון בעקבות ספירה"], [900, "דוח ייצור-כניסה"], [910, "דוח ייצור-יציאה"],
+  ];
+  const map: Record<number, UniformPrintReportRow> = {};
+  for (const [code, description] of definitions) map[code] = { code, description, count: 0, total: 0 };
+  for (const doc of docs) {
+    const code = docType(doc);
+    const t = totals(doc).total;
+    map[code].count += 1;
+    map[code].total += t;
+  }
+  return {
+    businessTaxId: input.business.taxId,
+    businessName: input.business.name,
+    fromDate: input.fromDate,
+    toDate: input.toDate,
+    primaryId: result.primaryId,
+    generatedAt: result.generatedAt,
+    recordCounts: result.recordCounts,
+    documents: Object.values(map),
+    softwareName: input.config.softwareName,
+    softwareVersion: input.config.softwareVersion,
+    registrationNumber: input.config.registrationNumber,
   };
 }
 

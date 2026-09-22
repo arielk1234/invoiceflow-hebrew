@@ -337,6 +337,51 @@ export type Database = {
           },
         ]
       }
+      tax_authority_requests: {
+        Row: {
+          id: string
+          business_id: string
+          document_id: string
+          request_kind: string
+          idempotency_key: string
+          status: string
+          external_reference: string | null
+          response_payload: Json | null
+          error_code: string | null
+          error_message: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          business_id: string
+          document_id: string
+          request_kind: string
+          idempotency_key: string
+          status?: string
+          external_reference?: string | null
+          response_payload?: Json | null
+          error_code?: string | null
+          error_message?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          business_id?: string
+          document_id?: string
+          request_kind?: string
+          idempotency_key?: string
+          status?: string
+          external_reference?: string | null
+          response_payload?: Json | null
+          error_code?: string | null
+          error_message?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           business_name: string
@@ -428,6 +473,14 @@ export type Database = {
       calculate_document_totals: {
         Args: { p_document_id: string }
         Returns: { subtotal: number; vat_amount: number; total_amount: number }[]
+      }
+      begin_tax_authority_request: {
+        Args: { _document_id: string; _idempotency_key: string }
+        Returns: Database["public"]["Tables"]["tax_authority_requests"]["Row"]
+      }
+      update_tax_authority_request: {
+        Args: { _request_id: string; _status: string; _external_reference?: string | null; _response_payload?: Json | null; _error_code?: string | null; _error_message?: string | null }
+        Returns: Database["public"]["Tables"]["tax_authority_requests"]["Row"]
       }
     }
     Enums: {

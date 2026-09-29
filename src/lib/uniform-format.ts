@@ -572,7 +572,7 @@ export function buildSimulatorFixture(input: UniformExportInput): SimulatorFixtu
   };
   const data: string[] = [];
   let seq = 1;
-  const counts: Record<string, number> = { "100A": 1, "100B": 0, "110B": 0, "100C": 0, "110D": 0, "120D": 0, "100M": 0, "900Z": 1 };
+  const counts: Record<string, number> = { "A100": 1, "B100": 0, "B110": 0, "C100": 0, "D110": 0, "D120": 0, "M100": 0, "Z900": 1 };
   data.push(opening(input.business.taxId, id));
 
   for (const code of codes) {
@@ -693,7 +693,7 @@ export function validateUniformExportText(result: UniformExportResult): string[]
   const closingLine = dataLines[dataLines.length - 1];
   if (closingLine) {
     const declaredTotal = closingLine.slice(45, 60);
-    if (declaredTotal !== n(dataLines.length, 15)) errors.push("TOTAL_RECORD_COUNT_MISMATCH_900Z");
+    if (declaredTotal !== n(dataLines.length, 15)) errors.push("TOTAL_RECORD_COUNT_MISMATCH_Z900");
   }
 
   const iniTotal = iniLines[0]?.slice(9, 24);

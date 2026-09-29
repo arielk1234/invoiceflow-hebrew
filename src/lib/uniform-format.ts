@@ -8,21 +8,21 @@ export const UNIFORM_FORMAT_VERSION = "1.31";
 export const CRLF = "\r\n";
 
 export const UNIFORM_RECORDS = {
-  A000: { file: "INI.TXT", code: "000A", length: 466 },
-  B100_SUMMARY: { file: "INI.TXT", code: "100B", length: 19 },
-  B110_SUMMARY: { file: "INI.TXT", code: "110B", length: 19 },
-  C100_SUMMARY: { file: "INI.TXT", code: "100C", length: 19 },
-  D110_SUMMARY: { file: "INI.TXT", code: "110D", length: 19 },
-  D120_SUMMARY: { file: "INI.TXT", code: "120D", length: 19 },
-  M100_SUMMARY: { file: "INI.TXT", code: "100M", length: 19 },
-  A100: { file: "BKMVDATA.TXT", code: "100A", length: 95 },
-  B100: { file: "BKMVDATA.TXT", code: "100B", length: 317 },
-  B110: { file: "BKMVDATA.TXT", code: "110B", length: 376 },
-  C100: { file: "BKMVDATA.TXT", code: "100C", length: 444 },
-  D110: { file: "BKMVDATA.TXT", code: "110D", length: 339 },
-  D120: { file: "BKMVDATA.TXT", code: "120D", length: 222 },
-  M100: { file: "BKMVDATA.TXT", code: "100M", length: 298 },
-  Z900: { file: "BKMVDATA.TXT", code: "900Z", length: 110 },
+  A000: { file: "INI.TXT", code: "A000", length: 466 },
+  B100_SUMMARY: { file: "INI.TXT", code: "B100", length: 19 },
+  B110_SUMMARY: { file: "INI.TXT", code: "B110", length: 19 },
+  C100_SUMMARY: { file: "INI.TXT", code: "C100", length: 19 },
+  D110_SUMMARY: { file: "INI.TXT", code: "D110", length: 19 },
+  D120_SUMMARY: { file: "INI.TXT", code: "D120", length: 19 },
+  M100_SUMMARY: { file: "INI.TXT", code: "M100", length: 19 },
+  A100: { file: "BKMVDATA.TXT", code: "A100", length: 95 },
+  B100: { file: "BKMVDATA.TXT", code: "B100", length: 317 },
+  B110: { file: "BKMVDATA.TXT", code: "B110", length: 376 },
+  C100: { file: "BKMVDATA.TXT", code: "C100", length: 444 },
+  D110: { file: "BKMVDATA.TXT", code: "D110", length: 339 },
+  D120: { file: "BKMVDATA.TXT", code: "D120", length: 222 },
+  M100: { file: "BKMVDATA.TXT", code: "M100", length: 298 },
+  Z900: { file: "BKMVDATA.TXT", code: "Z900", length: 110 },
 } as const;
 
 export type UniformExportConfig = {
@@ -124,6 +124,14 @@ function qty(value: number): string {
   return sign + raw;
 }
 
+function qtyAccounting(value: number): string {
+  const sign = value < 0 ? "-" : "+";
+  const raw = String(Math.round(Math.abs(value) * 100)).padStart(11, "0");
+  assert(raw.length === 11, "UNIFORM_ACCOUNTING_QUANTITY_OVERFLOW");
+  return sign + raw;
+}
+
+
 function docType(doc: Doc): number {
   if (doc.type === "invoice") return 305;
   if (doc.type === "credit_note") return 330;
@@ -133,7 +141,8 @@ function docType(doc: Doc): number {
 function docNumber(value: string): string {
   const v = value.trim();
   assert(v.length <= 20, "UNIFORM_DOCUMENT_NUMBER_TOO_LONG");
-  return v.padStart(20, "0");
+  if (/^\d+$/.test(v)) return v.padStart(20, "0");
+  return v.padEnd(20, " ");
 }
 
 function totals(doc: Pick<Doc, "items" | "vatRate">) {
@@ -157,21 +166,21 @@ function summary(code: string, count: number): string {
 
 function opening(taxId: string, id: string): string {
   const r = blank(95);
-  field(r, 1, 4, "100A");
+  field(r, 1, 4, "A100");
   field(r, 5, 9, "1", true);
   field(r, 14, 9, taxId, true);
   field(r, 23, 15, id, true);
-  field(r, 38, 8, "&1.31OF&");
+  field(r, 38, 8, "&OF1.31&");
   return line(r);
 }
 
 function closing(taxId: string, id: string, total: number): string {
   const r = blank(110);
-  field(r, 1, 4, "900Z");
+  field(r, 1, 4, "Z900");
   field(r, 5, 9, n(total, 9), true);
   field(r, 14, 9, taxId, true);
   field(r, 23, 15, id, true);
-  field(r, 38, 8, "&1.31OF&");
+  field(r, 38, 8, "&OF1.31&");
   field(r, 46, 15, n(total, 15), true);
   return line(r);
 }
@@ -186,11 +195,11 @@ function ini(
   generatedAt: Date,
 ): string {
   const r = blank(466);
-  field(r, 1, 4, "000A");
+  field(r, 1, 4, "A000");
   field(r, 10, 15, n(totalRecords, 15), true);
   field(r, 25, 9, business.taxId, true);
   field(r, 34, 15, id, true);
-  field(r, 49, 8, "&1.31OF&");
+  field(r, 49, 8, "&OF1.31&");
   field(r, 57, 8, config.registrationNumber, true);
   field(r, 65, 20, config.softwareName);
   field(r, 85, 20, config.softwareVersion);
@@ -359,31 +368,31 @@ export function exportUniformFormat(input: UniformExportInput): UniformExportRes
   data.push(closing(input.business.taxId, id, total));
 
   const iniText = [
-    // INI.TXT must start with exactly one 000A record.
+    // INI.TXT must start with exactly one A000 record.
     ini(input.business, input.config, total, id, input.fromDate, input.toDate, generatedAt),
-    summary("100B", 0),
-    summary("110B", 0),
-    summary("100C", cCount),
-    summary("110D", dCount),
-    summary("120D", d120Count),
-    summary("100M", 0),
+    summary("B100", 0),
+    summary("B110", 0),
+    summary("C100", cCount),
+    summary("D110", dCount),
+    summary("D120", d120Count),
+    summary("M100", 0),
   ].join("");
 
-  assert(iniText.startsWith("000A"), "INI_MISSING_000A");
-  assert(iniText.split(CRLF)[0].length === 466, "INI_000A_LENGTH_INVALID");
+  assert(iniText.startsWith("A000"), "INI_MISSING_A000");
+  assert(iniText.split(CRLF)[0].length === 466, "INI_A000_LENGTH_INVALID");
 
   return {
     iniText,
     bkmvdataText: data.join(""),
     recordCounts: {
-      "100A": 1,
-      "100B": 0,
-      "110B": 0,
-      "100C": cCount,
-      "110D": dCount,
-      "120D": d120Count,
-      "100M": 0,
-      "900Z": 1,
+      "A100": 1,
+      "B100": 0,
+      "B110": 0,
+      "C100": cCount,
+      "D110": dCount,
+      "D120": d120Count,
+      "M100": 0,
+      "Z900": 1,
     },
     primaryId: id,
     generatedAt,
@@ -523,7 +532,7 @@ function syntheticB100(business: BusinessInfo, recordNo: number, transactionNo: 
   field(r, 204, 3, "ILS");
   field(r, 207, 15, amount(100));
   field(r, 222, 15, amount(0));
-  field(r, 237, 12, n(1, 12), true);
+  field(r, 237, 12, qtyAccounting(1));
   field(r, 276, 8, "20260922", true);
   return line(r);
 }
@@ -534,13 +543,13 @@ function syntheticM100(business: BusinessInfo, recordNo: number, itemNo: number)
   field(r, 5, 9, n(recordNo, 9), true);
   field(r, 14, 9, business.taxId, true);
   field(r, 23, 20, "SIMITEM" + n(itemNo, 12));
+  field(r, 43, 20, "SIMSUP" + n(itemNo, 14));
   field(r, 63, 20, "SIMITEM" + n(itemNo, 12));
-  field(r, 83, 20, "INT" + n(itemNo, 17));
-  field(r, 103, 50, "פריט סימולציה " + itemNo);
+  field(r, 83, 50, "פריט סימולציה " + itemNo);
   field(r, 173, 20, "יחידה");
-  field(r, 193, 12, n(10, 12), true);
-  field(r, 205, 12, n(20, 12), true);
-  field(r, 217, 12, n(5, 12), true);
+  field(r, 193, 12, qtyAccounting(10));
+  field(r, 205, 12, qtyAccounting(20));
+  field(r, 217, 12, qtyAccounting(5));
   field(r, 229, 10, "0000000100", true);
   return line(r);
 }
@@ -571,39 +580,39 @@ export function buildSimulatorFixture(input: UniformExportInput): SimulatorFixtu
       const linkId = seq + 1;
       const number = "SIM" + String(code) + String(i).padStart(4, "0");
       data.push(genericHeader(input.business, client, code, number, ++seq, linkId, "2026-09-22"));
-      counts["100C"]++;
+      counts["C100"]++;
       data.push(genericDetail(input.business, code, number, ++seq, 1, linkId, "2026-09-22"));
-      counts["110D"]++;
+      counts["D110"]++;
       if (code === 400 || code === 405) {
         data.push(genericReceiptDetail(input.business, code, number, ++seq, linkId, "2026-09-22"));
-        counts["120D"]++;
+        counts["D120"]++;
       }
     }
   }
 
   for (let i = 1; i <= 600; i++) {
     data.push(syntheticB110(input.business, ++seq, i));
-    counts["110B"]++;
+    counts["B110"]++;
   }
   for (let i = 1; i <= 900; i++) {
     data.push(syntheticB100(input.business, ++seq, i, (i % 3) + 1, (i % 600) + 1));
-    counts["100B"]++;
+    counts["B100"]++;
   }
   for (let i = 1; i <= 200; i++) {
     data.push(syntheticM100(input.business, ++seq, i));
-    counts["100M"]++;
+    counts["M100"]++;
   }
 
   data.push(closing(input.business.taxId, id, data.length + 1));
   const total = data.length;
   const iniText = [
     ini(input.business, input.config, total, id, input.fromDate, input.toDate, generatedAt),
-    summary("100B", counts["100B"]),
-    summary("110B", counts["110B"]),
-    summary("100C", counts["100C"]),
-    summary("110D", counts["110D"]),
-    summary("120D", counts["120D"]),
-    summary("100M", counts["100M"]),
+    summary("B100", counts["B100"]),
+    summary("B110", counts["B110"]),
+    summary("C100", counts["C100"]),
+    summary("D110", counts["D110"]),
+    summary("D120", counts["D120"]),
+    summary("M100", counts["M100"]),
   ].join("");
   const result: UniformExportResult = {
     iniText,
@@ -660,16 +669,16 @@ export function validateUniformExportText(result: UniformExportResult): string[]
   const iniLines = result.iniText.split(CRLF).filter(Boolean);
   const dataLines = result.bkmvdataText.split(CRLF).filter(Boolean);
   const lengths: Record<string, number> = {
-    "000A": 466, "100A": 95, "100B": 317, "110B": 376, "100C": 444, "110D": 339, "120D": 222, "100M": 298, "900Z": 110,
+    "A000": 466, "A100": 95, "B100": 317, "B110": 376, "C100": 444, "D110": 339, "D120": 222, "M100": 298, "Z900": 110,
   };
-  if (!iniLines[0] || iniLines[0].slice(0, 4) !== "000A") errors.push("INI_MISSING_000A");
-  if (iniLines[0] && iniLines[0].length !== 466) errors.push("INI_000A_LENGTH_INVALID");
-  if (!dataLines[0] || dataLines[0].slice(0, 4) !== "100A") errors.push("DATA_MISSING_100A");
-  if (!dataLines[dataLines.length - 1] || dataLines[dataLines.length - 1].slice(0, 4) !== "900Z") errors.push("DATA_MISSING_900Z");
+  if (!iniLines[0] || iniLines[0].slice(0, 4) !== "A000") errors.push("INI_MISSING_A000");
+  if (iniLines[0] && iniLines[0].length !== 466) errors.push("INI_A000_LENGTH_INVALID");
+  if (!dataLines[0] || dataLines[0].slice(0, 4) !== "A100") errors.push("DATA_MISSING_A100");
+  if (!dataLines[dataLines.length - 1] || dataLines[dataLines.length - 1].slice(0, 4) !== "Z900") errors.push("DATA_MISSING_Z900");
 
   for (const l of iniLines) {
     const code = l.slice(0, 4);
-    const expected = code === "000A" ? 466 : 19;
+    const expected = code === "A000" ? 466 : 19;
     if (iso88598(l).length !== expected) errors.push("INI_LENGTH_" + code);
   }
   for (const l of dataLines) {
@@ -688,7 +697,7 @@ export function validateUniformExportText(result: UniformExportResult): string[]
   }
 
   const iniTotal = iniLines[0]?.slice(9, 24);
-  if (iniTotal !== n(dataLines.length, 15)) errors.push("TOTAL_RECORD_COUNT_MISMATCH_000A");
+  if (iniTotal !== n(dataLines.length, 15)) errors.push("TOTAL_RECORD_COUNT_MISMATCH_A000");
 
   return errors;
 }

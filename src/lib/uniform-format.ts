@@ -497,7 +497,7 @@ function genericReceiptDetail(
 
 function syntheticB110(business: BusinessInfo, recordNo: number, accountNo: number): string {
   const r = blank(376);
-  field(r, 1, 4, "110B");
+  field(r, 1, 4, "B110");
   field(r, 5, 9, n(recordNo, 9), true);
   field(r, 14, 9, business.taxId, true);
   const key = "SIMACC" + n(accountNo, 9);
@@ -515,7 +515,7 @@ function syntheticB110(business: BusinessInfo, recordNo: number, accountNo: numb
 
 function syntheticB100(business: BusinessInfo, recordNo: number, transactionNo: number, rowNo: number, accountNo: number): string {
   const r = blank(317);
-  field(r, 1, 4, "100B");
+  field(r, 1, 4, "B100");
   field(r, 5, 9, n(recordNo, 9), true);
   field(r, 14, 9, business.taxId, true);
   field(r, 23, 10, n(transactionNo, 10), true);
@@ -539,7 +539,7 @@ function syntheticB100(business: BusinessInfo, recordNo: number, transactionNo: 
 
 function syntheticM100(business: BusinessInfo, recordNo: number, itemNo: number): string {
   const r = blank(298);
-  field(r, 1, 4, "100M");
+  field(r, 1, 4, "M100");
   field(r, 5, 9, n(recordNo, 9), true);
   field(r, 14, 9, business.taxId, true);
   field(r, 23, 20, "SIMITEM" + n(itemNo, 12));

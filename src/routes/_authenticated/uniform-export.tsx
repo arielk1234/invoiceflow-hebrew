@@ -167,8 +167,9 @@ function UniformExportPage() {
         )}
         {!config.registrationNumber && (
           <p className="mt-3 text-xs text-muted-foreground">
-            לא הוגדר מספר תעודת רישום (VITE_UNIFORM_SOFTWARE_REGISTRATION_NUMBER), ולכן מספר הרישום
-            בקבצים יהיה אפסים. הסימולטור של רשות המסים לא מקבל אפסים בשדה הזה (1006).
+            עדיין אין לתוכנה תעודת רישום, ולכן בשדה מספר הרישום (1006) נכתב 00000001, כמו בדוגמה של
+            רשות המסים לבקשת רישום. אחרי קבלת התעודה מגדירים את המספר ב-
+            VITE_UNIFORM_SOFTWARE_REGISTRATION_NUMBER.
           </p>
         )}
         {error && (

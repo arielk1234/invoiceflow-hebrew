@@ -170,6 +170,13 @@ const APPENDIX_1: Array<[number, string]> = [
   [910, "דוח ייצור-יציאה"],
 ];
 
+/**
+ * Field 1006 before the Tax Authority issues a registration certificate. The
+ * simulator rejects zeros; the Tax Authority's own sample of a valid simulator
+ * report for a registration request shows 00000001.
+ */
+export const UNREGISTERED_SOFTWARE_NUMBER = "00000001";
+
 export type UniformExportConfig = {
   /** 8 digits; empty until the Tax Authority issues a registration certificate. */
   registrationNumber: string;
@@ -491,7 +498,7 @@ function iniRecord(
   num(r, 25, 9, business.taxId);
   num(r, 34, 15, id);
   text(r, 49, 8, SYSTEM_CONSTANT);
-  num(r, 57, 8, config.registrationNumber || "0");
+  num(r, 57, 8, config.registrationNumber || UNREGISTERED_SOFTWARE_NUMBER);
   text(r, 65, 20, config.softwareName);
   text(r, 85, 20, config.softwareVersion);
   num(r, 105, 9, config.manufacturerTaxId);

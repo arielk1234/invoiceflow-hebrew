@@ -195,7 +195,8 @@ export function DocPreview({
       {(doc.type === "receipt" || doc.type === "credit_note") && (
         <p className="mt-10 hidden text-sm print:block">חתימה: ______________________</p>
       )}
-      <p className="mt-6 text-xs text-muted-foreground">מסמך ממוחשב · הופק באמצעות InvoiceFlow</p>
+      {/* Not a "מסמך ממוחשב": that requires an approved electronic signature (section 18B). */}
+      <p className="mt-6 text-xs text-muted-foreground">הופק באמצעות InvoiceFlow</p>
     </article>
   );
 }

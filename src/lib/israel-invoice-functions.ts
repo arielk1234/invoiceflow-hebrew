@@ -122,9 +122,11 @@ export const requestIsraelAllocation = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const supabase = createServerSupabase(data.accessToken);
 
+    // The client key is composite (client_id, business_id), so the relation is
+    // named by its constraint; a column hint finds no relationship.
     const { data: document, error: documentError } = await supabase
       .from("documents")
-      .select("*, clients:client_id(*), businesses:business_id(*)")
+      .select("*, clients!documents_client_id_business_id_fkey(*), businesses:business_id(*)")
       .eq("id", data.documentId)
       .single();
 

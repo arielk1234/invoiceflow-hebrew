@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Trash2, Plus, Save, FileCheck2 } from "lucide-react";
 import { toast } from "sonner";
@@ -18,7 +18,7 @@ import {
   type DocType,
 } from "@/lib/store";
 import { allocationThresholdForDate } from "@/lib/israel-compliance";
-import { errorMessage, isHeldInvoiceError } from "@/lib/error-messages";
+import { errorMessage } from "@/lib/error-messages";
 
 const field =
   "w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30";
@@ -49,6 +49,16 @@ export function DocEditor({
     t.subtotal > allocationThreshold &&
     doc.vatRate > 0 &&
     Boolean(selectedClient?.isVatRegistered);
+
+  // A VAT-registered client needs the allocation number to deduct input VAT, so
+  // it is requested by default once the invoice passes the threshold; the user
+  // can still untick it when the client did not ask for one.
+  const [allocationTouched, setAllocationTouched] = useState(false);
+  useEffect(() => {
+    if (allocationRelevant && !allocationTouched && !doc.allocationRequested) {
+      setDoc((d) => ({ ...d, allocationRequested: true }));
+    }
+  }, [allocationRelevant, allocationTouched, doc.allocationRequested]);
 
   const set = <K extends keyof Doc>(key: K, value: Doc[K]) =>
     setDoc((d) => ({ ...d, [key]: value }));
@@ -105,8 +115,10 @@ export function DocEditor({
       leave(id);
     } catch (error) {
       toast.error(errorMessage(error, issueAfterSave ? "הפקת המסמך נכשלה" : "שמירת המסמך נכשלה"));
-      // A held invoice is decided on its page, which shows the options.
-      if (savedId && isHeldInvoiceError(error)) leave(savedId);
+      // The draft was saved even though issuing failed: continue on its page
+      // (which also shows the options for a held invoice), so another attempt
+      // does not create a second draft.
+      if (savedId) leave(savedId);
     } finally {
       setSaving(false);
     }
@@ -354,7 +366,10 @@ export function DocEditor({
                     type="checkbox"
                     className="mt-1"
                     checked={doc.allocationRequested}
-                    onChange={(e) => set("allocationRequested", e.target.checked)}
+                    onChange={(e) => {
+                      setAllocationTouched(true);
+                      set("allocationRequested", e.target.checked);
+                    }}
                   />
                   <span>הלקוח ביקש מספר הקצאה לחשבונית זו</span>
                 </label>
@@ -375,8 +390,9 @@ export function DocEditor({
                 )}
                 <p className="mt-2 text-xs text-muted-foreground">
                   לפי כללי 2026, הסף הוא מעל {allocationThreshold.toLocaleString("he-IL")} ₪ לפני
-                  מע״מ, כאשר מתקיימים התנאים הרלוונטיים. כשהלקוח ביקש מספר הקצאה ולא הוזן מספר, הוא
-                  יתבקש אוטומטית מרשות המסים בעת ההפקה.
+                  מע״מ, כאשר מתקיימים התנאים הרלוונטיים. ללקוח עוסק מורשה התיבה מסומנת מראש, כי בלי
+                  מספר הקצאה הוא לא יוכל לנכות את המע״מ. כשהתיבה מסומנת ולא הוזן מספר, הוא יתבקש
+                  אוטומטית מרשות המסים בעת ההפקה.
                 </p>
               </div>
             )}

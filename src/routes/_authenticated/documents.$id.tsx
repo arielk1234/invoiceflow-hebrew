@@ -165,8 +165,13 @@ function DocPage() {
           {locked && doc.status !== "cancelled" && (
             <button
               onClick={async () => {
+                // Cancelling cannot be undone; the document stays on record as cancelled.
+                const reason = window.prompt(
+                  "ביטול מסמך אינו הפיך, והמסמך יישאר ברשומות כמבוטל. מה סיבת הביטול?",
+                );
+                if (reason === null) return;
                 try {
-                  await actions.cancelDoc(doc.id, "ביטול על ידי המשתמש");
+                  await actions.cancelDoc(doc.id, reason.trim() || "ביטול על ידי המשתמש");
                   toast.success("המסמך בוטל ונשמר ברשומות");
                 } catch (error) {
                   toast.error(errorMessage(error, "לא ניתן לבטל את המסמך"));

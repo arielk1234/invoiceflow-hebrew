@@ -1,0 +1,15 @@
+# Render Blueprint: hosts the app as a Node server (the default build targets
+# Cloudflare). The database stays on Lovable Cloud; .env in the repository holds
+# its public URL and publishable key, and Render's own variables take precedence.
+services:
+  - type: web
+    name: invoiceflow-hebrew
+    runtime: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install && NITRO_PRESET=node-server npm run build
+    startCommand: node --env-file=.env .output/server/index.mjs
+    healthCheckPath: /auth
+    envVars:
+      - key: NODE_VERSION
+        value: "22"

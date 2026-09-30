@@ -4,6 +4,7 @@ import { Plus, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { actions, money, totals, uid, useData, type Client } from "@/lib/store";
+import { errorMessage } from "@/lib/error-messages";
 
 export const Route = createFileRoute("/_authenticated/clients")({
   head: () => ({
@@ -38,8 +39,8 @@ function ClientsPage() {
       await actions.saveClient(draft);
       setDraft(null);
       toast.success("הלקוח נשמר בענן");
-    } catch {
-      toast.error("שמירת הלקוח נכשלה");
+    } catch (error) {
+      toast.error(errorMessage(error, "שמירת הלקוח נכשלה"));
     }
   };
 
@@ -61,11 +62,19 @@ function ClientsPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <label className={labelCls}>שם הלקוח</label>
-              <input className={field} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+              <input
+                className={field}
+                value={draft.name}
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              />
             </div>
             <div>
               <label className={labelCls}>ח.פ / ע.מ</label>
-              <input className={field} value={draft.taxId ?? ""} onChange={(e) => setDraft({ ...draft, taxId: e.target.value })} />
+              <input
+                className={field}
+                value={draft.taxId ?? ""}
+                onChange={(e) => setDraft({ ...draft, taxId: e.target.value })}
+              />
             </div>
             <div>
               <label className={labelCls}>סוג לקוח לצורכי מע״מ</label>
@@ -80,20 +89,42 @@ function ClientsPage() {
             </div>
             <div>
               <label className={labelCls}>דוא״ל</label>
-              <input className={field} value={draft.email ?? ""} onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
+              <input
+                className={field}
+                value={draft.email ?? ""}
+                onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+              />
             </div>
             <div>
               <label className={labelCls}>טלפון</label>
-              <input className={field} value={draft.phone ?? ""} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} />
+              <input
+                className={field}
+                value={draft.phone ?? ""}
+                onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
+              />
             </div>
             <div className="sm:col-span-2 lg:col-span-1">
               <label className={labelCls}>כתובת</label>
-              <input className={field} value={draft.address ?? ""} onChange={(e) => setDraft({ ...draft, address: e.target.value })} />
+              <input
+                className={field}
+                value={draft.address ?? ""}
+                onChange={(e) => setDraft({ ...draft, address: e.target.value })}
+              />
             </div>
           </div>
           <div className="mt-4 flex gap-2">
-            <button onClick={save} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90">שמירה</button>
-            <button onClick={() => setDraft(null)} className="rounded-lg border border-input px-4 py-2 text-sm font-medium hover:bg-secondary">ביטול</button>
+            <button
+              onClick={save}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+              שמירה
+            </button>
+            <button
+              onClick={() => setDraft(null)}
+              className="rounded-lg border border-input px-4 py-2 text-sm font-medium hover:bg-secondary"
+            >
+              ביטול
+            </button>
           </div>
         </section>
       )}
@@ -107,7 +138,13 @@ function ClientsPage() {
               <div className="flex items-start justify-between gap-2">
                 <h2 className="text-base font-bold text-foreground">{c.name}</h2>
                 <div className="flex gap-1">
-                  <button aria-label="עריכת לקוח" onClick={() => setDraft(c)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"><Pencil className="size-4" /></button>
+                  <button
+                    aria-label="עריכת לקוח"
+                    onClick={() => setDraft(c)}
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  >
+                    <Pencil className="size-4" />
+                  </button>
                   <button
                     aria-label="מחיקת לקוח"
                     onClick={async () => {
@@ -119,15 +156,22 @@ function ClientsPage() {
                       }
                     }}
                     className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  ><Trash2 className="size-4" /></button>
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
                 </div>
               </div>
               {c.taxId && <p className="mt-1 text-sm text-muted-foreground">ח.פ / ע.מ {c.taxId}</p>}
-              <p className="mt-1 text-xs font-medium text-muted-foreground">{c.isVatRegistered ? "עוסק מורשה / רשום במע״מ" : "לא מסומן כעוסק מורשה"}</p>
+              <p className="mt-1 text-xs font-medium text-muted-foreground">
+                {c.isVatRegistered ? "עוסק מורשה / רשום במע״מ" : "לא מסומן כעוסק מורשה"}
+              </p>
               {c.email && <p className="text-sm text-muted-foreground">{c.email}</p>}
               {c.phone && <p className="text-sm text-muted-foreground">{c.phone}</p>}
               {c.address && <p className="text-sm text-muted-foreground">{c.address}</p>}
-              <p className="mt-4 border-t border-border pt-3 text-sm text-muted-foreground">{clientDocs.length} מסמכים · <span className="font-semibold text-foreground">{money(sum)}</span></p>
+              <p className="mt-4 border-t border-border pt-3 text-sm text-muted-foreground">
+                {clientDocs.length} מסמכים ·{" "}
+                <span className="font-semibold text-foreground">{money(sum)}</span>
+              </p>
             </div>
           );
         })}

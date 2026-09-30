@@ -80,9 +80,7 @@ function DocumentsPage() {
 
       <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         {list.length === 0 ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">
-            לא נמצאו מסמכים תואמים.
-          </p>
+          <p className="py-12 text-center text-sm text-muted-foreground">לא נמצאו מסמכים תואמים.</p>
         ) : (
           <ul className="divide-y divide-border">
             {list.map((d) => {

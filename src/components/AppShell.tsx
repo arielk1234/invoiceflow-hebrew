@@ -1,7 +1,16 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { FileText, LayoutDashboard, Users, Settings, Plus, LogOut, FileSpreadsheet } from "lucide-react";
+import {
+  FileText,
+  LayoutDashboard,
+  Users,
+  Settings,
+  Plus,
+  LogOut,
+  FileSpreadsheet,
+  ClipboardList,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const nav = [
@@ -9,6 +18,7 @@ const nav = [
   { to: "/documents", label: "מסמכים", icon: FileText },
   { to: "/clients", label: "לקוחות", icon: Users },
   { to: "/settings", label: "הגדרות עסק", icon: Settings },
+  { to: "/reports", label: "דוחות", icon: ClipboardList },
   { to: "/uniform-export", label: "מבנה אחיד", icon: FileSpreadsheet },
 ] as const;
 
@@ -36,9 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground">
               <FileText className="size-5" />
             </span>
-            <span className="text-lg font-bold tracking-tight text-foreground">
-              חשבונית קלה
-            </span>
+            <span className="text-lg font-bold tracking-tight text-foreground">חשבונית קלה</span>
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
@@ -97,9 +105,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 print:max-w-none print:p-0">
-        {children}
-      </main>
+      <main className="mx-auto max-w-6xl px-4 py-8 print:max-w-none print:p-0">{children}</main>
     </div>
   );
 }

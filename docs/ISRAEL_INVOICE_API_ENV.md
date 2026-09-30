@@ -2,14 +2,16 @@
 
 These values are server-side secrets/configuration. Never expose them through Vite/React variables and never commit real values.
 
+Step-by-step setup (developer portal, secrets, sandbox test users): [ISRAEL_INVOICE_SETUP.md](ISRAEL_INVOICE_SETUP.md). The settings page shows which of these are missing.
+
 Required:
 - `ISRAEL_INVOICE_CLIENT_ID`
 - `ISRAEL_INVOICE_CLIENT_SECRET`
-- `ISRAEL_INVOICE_SCOPE`
+- `ISRAEL_INVOICE_SCOPE` — `scope` in the Tax Authority's official examples
 - `ISRAEL_INVOICE_REDIRECT_URI`
 - `ISRAEL_INVOICE_OAUTH_STATE_SECRET`
 - `ISRAEL_INVOICE_TOKEN_ENCRYPTION_KEY` — base64 for exactly 32 random bytes
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` — normally provided by Lovable Cloud
 
 Existing Supabase server variables:
 - `SUPABASE_URL`
@@ -18,6 +20,9 @@ Existing Supabase server variables:
 Optional:
 - `ISRAEL_INVOICE_API_ENVIRONMENT=sandbox` or `production`
 - `ISRAEL_INVOICE_API_BASE_URL` for controlled integration testing only.
+- `ISRAEL_INVOICE_SOFTWARE_REGISTRATION_NUMBER` — the software registration certificate number (8 digits, as in the Uniform Format; sent as N9) (מספר רישום תוכנה). Until the software is registered, the issuing business's VAT number is sent instead, as the Tax Authority document allows.
+
+Allocation numbers are requested from the Approval V2 service (`/shaam/{tsandbox|production}/Invoices/v2/Approval` on `ita-api.taxes.gov.il`), per "מודל חשבוניות ישראל — תיאור ה-API's", edition 2.0 (7.2024). OAuth (authorize/token) runs on `openapi.taxes.gov.il`, per the Tax Authority Open API user guide.
 
 OAuth redirect URI must exactly match the URI registered for the InvoiceFlow application with the Tax Authority.
 

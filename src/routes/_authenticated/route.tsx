@@ -19,12 +19,11 @@ export const Route = createFileRoute("/_authenticated")({
       await supabase.from("profiles").insert({
         id: user.id,
         email: user.email ?? "",
-        full_name: meta['full_name'] ?? "",
-        business_name: meta['business_name'] ?? "",
+        full_name: meta["full_name"] ?? "",
+        business_name: meta["business_name"] ?? "",
         business_type:
-          (meta['business_type'] as "osek_patur" | "osek_murshe" | "company") ??
-          "osek_patur",
-        tax_id: meta['tax_id'] ?? "",
+          (meta["business_type"] as "osek_patur" | "osek_murshe" | "company") ?? "osek_patur",
+        tax_id: meta["tax_id"] ?? "",
       });
     }
 

@@ -10,9 +10,7 @@ const styles: Record<DocStatus, string> = {
 
 export function StatusBadge({ status }: { status: DocStatus }) {
   return (
-    <span
-      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status]}`}
-    >
+    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status]}`}>
       {statusLabel[status]}
     </span>
   );

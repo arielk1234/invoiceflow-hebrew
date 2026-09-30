@@ -7,6 +7,8 @@
 const MESSAGES: Array<[code: string, message: string]> = [
   ["ALLOCATION_NUMBER_REQUIRED", "נדרש מספר הקצאה לפני הפקת החשבונית"],
   ["ISSUE_DATE_IN_FUTURE", "אי אפשר להפיק מסמך בתאריך עתידי"],
+  ["CREDIT_REASON_REQUIRED", "יש לציין את סיבת הזיכוי"],
+  ["DRAFT_IS_NOT_A_DOCUMENT", "טיוטה אינה מסמך. אפשר להדפיס אותה רק כטיוטה."],
   ["CHEQUE_DETAILS_REQUIRED", "בתשלום בהמחאה יש למלא מספר בנק, סניף, חשבון ומספר המחאה"],
   ["DRAFT_REPORTED_TO_TAX_AUTHORITY", "מספר הטיוטה כבר נשלח לרשות המסים, ולכן אי אפשר למחוק אותה"],
   ["DRAFT_MUST_BE_DELETED_NOT_CANCELLED", "טיוטה לא מבטלים, אפשר למחוק אותה"],

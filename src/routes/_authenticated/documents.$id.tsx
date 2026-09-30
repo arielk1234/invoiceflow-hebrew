@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Download, Pencil, ArrowRight, Ban, FileCheck2 } from "lucide-react";
+import { Download, Pencil, ArrowRight, Ban, FileCheck2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AllocationDecisionPanel } from "@/components/AllocationDecisionPanel";
 import { AppShell } from "@/components/AppShell";
@@ -25,6 +25,9 @@ function DocPage() {
   const data = useData();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
+  // Set only for the print that was recorded as the original; any other output is a copy.
+  const [copyLabel, setCopyLabel] = useState<"מקור" | "העתק" | undefined>();
+  const [printing, setPrinting] = useState(false);
 
   if (!data) return <AppShell>טוען…</AppShell>;
 
@@ -42,6 +45,31 @@ function DocPage() {
 
   const client = data.clients.find((c) => c.id === doc.clientId);
   const locked = isLocked(doc);
+  const related = doc.relatedDocumentId
+    ? data.docs.find((d) => d.id === doc.relatedDocumentId)
+    : undefined;
+
+  // An issued document prints "מקור" once and "העתק" afterwards (appendix H (a)(4));
+  // a draft prints with its "טיוטה" marking.
+  const print = async () => {
+    if (!locked) {
+      window.print();
+      return;
+    }
+    setPrinting(true);
+    try {
+      const label = await actions.recordPrint(doc.id);
+      setCopyLabel(label);
+      window.addEventListener("afterprint", () => setCopyLabel(undefined), { once: true });
+      // Let the marking render before the print dialog opens.
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      window.print();
+    } catch (error) {
+      toast.error(errorMessage(error, "לא ניתן להדפיס את המסמך"));
+    } finally {
+      setPrinting(false);
+    }
+  };
 
   return (
     <AppShell>
@@ -107,12 +135,32 @@ function DocPage() {
           </div>
 
           <button
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 rounded-lg border border-input px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-secondary"
+            onClick={() => void print()}
+            disabled={printing}
+            className="inline-flex items-center gap-2 rounded-lg border border-input px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-secondary disabled:opacity-50"
           >
             <Download className="size-4" />
-            הדפסה / PDF
+            {!locked ? "הדפסת טיוטה" : doc.printCount ? "הדפסת העתק / PDF" : "הדפסת מקור / PDF"}
           </button>
+
+          {!locked && (
+            <button
+              onClick={async () => {
+                if (!window.confirm("למחוק את הטיוטה?")) return;
+                try {
+                  await actions.deleteDoc(doc.id);
+                  toast.success("הטיוטה נמחקה");
+                  navigate({ to: "/documents" });
+                } catch (error) {
+                  toast.error(errorMessage(error, "לא ניתן למחוק את הטיוטה"));
+                }
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border border-input px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="size-4" />
+              מחיקת טיוטה
+            </button>
+          )}
 
           {locked && doc.status !== "cancelled" && (
             <button
@@ -149,7 +197,13 @@ function DocPage() {
           onDone={() => setEditing(false)}
         />
       ) : (
-        <DocPreview doc={doc} client={client} business={data.business} />
+        <DocPreview
+          doc={doc}
+          client={client}
+          business={data.business}
+          related={related}
+          copyLabel={copyLabel ?? (locked ? "העתק" : undefined)}
+        />
       )}
 
       {doc.contentHash && (

@@ -437,7 +437,7 @@ function lineRecord(
     text(r, 53, 20, docNumber(base.number));
   }
   text(r, 94, 30, item.description.trim() || "פריט");
-  text(r, 204, 20, "יחידה");
+  text(r, 204, 20, item.unit?.trim() || "יחידה");
   signed(r, 224, 17, item.quantity, 4);
   signed(r, 241, 15, item.unitPrice);
   signed(r, 256, 15, 0);
@@ -678,8 +678,14 @@ export function buildSimulatorFixture(input: UniformExportInput): SimulatorFixtu
       make("invoice", i, INVOICES, {
         status: i % 40 === 39 ? "cancelled" : "issued",
         items: [
-          { id: `i${i}a`, description: "שירותי ייעוץ", quantity: 1 + (i % 4), unitPrice: 850 },
-          { id: `i${i}b`, description: "שעות עבודה", quantity: 2.5, unitPrice: 320 },
+          {
+            id: `i${i}a`,
+            description: "שירותי ייעוץ",
+            unit: "יחידה",
+            quantity: 1 + (i % 4),
+            unitPrice: 850,
+          },
+          { id: `i${i}b`, description: "שעות עבודה", unit: "שעה", quantity: 2.5, unitPrice: 320 },
         ],
       }),
     );
@@ -698,7 +704,9 @@ export function buildSimulatorFixture(input: UniformExportInput): SimulatorFixtu
               chequeNumber: String(1000 + i),
             }
           : {}),
-        items: [{ id: `r${i}`, description: "תשלום", quantity: 1, unitPrice: 1500 + i }],
+        items: [
+          { id: `r${i}`, description: "תשלום", unit: "יחידה", quantity: 1, unitPrice: 1500 + i },
+        ],
       }),
     );
   }
@@ -706,7 +714,16 @@ export function buildSimulatorFixture(input: UniformExportInput): SimulatorFixtu
     docs.push(
       make("credit_note", i, 60, {
         relatedDocumentId: `INV-${i}`,
-        items: [{ id: `c${i}`, description: "זיכוי על שירות", quantity: 1, unitPrice: 200 }],
+        creditReason: "תיקון מחיר",
+        items: [
+          {
+            id: `c${i}`,
+            description: "זיכוי על שירות",
+            unit: "יחידה",
+            quantity: 1,
+            unitPrice: 200,
+          },
+        ],
       }),
     );
   }

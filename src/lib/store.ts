@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { requestIsraelAllocation, sendAllocationDecision } from "./israel-invoice-functions";
 import { ALLOCATION_DECISIONS, type AllocationDecision } from "./israel-invoice-api";
@@ -15,7 +16,15 @@ export type Client = {
   address?: string;
   isVatRegistered: boolean;
 };
-export type LineItem = { id: string; description: string; quantity: number; unitPrice: number };
+export type LineItem = {
+  id: string;
+  description: string;
+  /** The unit the quantity is measured in (section 9 of the bookkeeping instructions). */
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+};
+export const DEFAULT_UNIT = "יחידה";
 export type BusinessInfo = {
   id: string;
   name: string;
@@ -45,6 +54,10 @@ export type Doc = {
   chequeAccount?: string;
   chequeNumber?: string;
   relatedDocumentId?: string;
+  /** Why a credit note changes the invoice (required on issue). */
+  creditReason?: string;
+  /** Printed copies so far: the first is "מקור", the rest "העתק". */
+  printCount?: number;
   allocationRequested: boolean;
   allocationNumber?: string;
   allocationRequestedAt?: string;
@@ -100,36 +113,63 @@ async function resolveActiveBusiness(userId: string) {
   if (rpcError) throw rpcError;
   return { businessId: newId as string, role: "owner" as BusinessRole };
 }
+const DOCUMENT_COLUMNS =
+  "*, document_items(*), tax_authority_requests(request_kind, status, error_code, updated_at)";
+
+/** Reads every page of a query: the API returns at most 1,000 rows per request. */
+async function allPages<T>(
+  page: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: T[] | null; error: PostgrestError | null }>,
+): Promise<{ data: T[] | null; error: PostgrestError | null }> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await page(from, from + 999);
+    if (error) return { data: null, error };
+    rows.push(...(data ?? []));
+    if (!data || data.length < 1000) return { data: rows, error: null };
+  }
+}
+
 async function fetchAll(): Promise<AppData | null> {
   const { data: auth } = await supabase.auth.getUser();
   const user = auth.user;
   if (!user) return null;
   const { businessId, role } = await resolveActiveBusiness(user.id);
-  const documents = (columns: string) =>
-    supabase
-      .from("documents")
-      .select(columns)
-      .eq("business_id", businessId)
-      .order("created_at", { ascending: false });
   const [businessRes, clientsRes, docsWithRequests] = await Promise.all([
     supabase.from("businesses").select("*").eq("id", businessId).single(),
-    supabase
-      .from("clients")
-      .select("*")
-      .eq("business_id", businessId)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("documents")
-      .select(
-        "*, document_items(*), tax_authority_requests(request_kind, status, error_code, updated_at)",
-      )
-      .eq("business_id", businessId)
-      .order("created_at", { ascending: false }),
+    allPages((from, to) =>
+      supabase
+        .from("clients")
+        .select("*")
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: true })
+        .order("id")
+        .range(from, to),
+    ),
+    allPages((from, to) =>
+      supabase
+        .from("documents")
+        .select(DOCUMENT_COLUMNS)
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: false })
+        .order("id")
+        .range(from, to),
+    ),
   ]);
   // Until the Tax Authority migrations run, tax_authority_requests does not exist;
   // keep the app usable without the hold status.
   const docsRes = docsWithRequests.error?.message.includes("schema cache")
-    ? ((await documents("*, document_items(*)")) as unknown as typeof docsWithRequests)
+    ? ((await allPages((from, to) =>
+        supabase
+          .from("documents")
+          .select("*, document_items(*)")
+          .eq("business_id", businessId)
+          .order("created_at", { ascending: false })
+          .order("id")
+          .range(from, to),
+      )) as unknown as typeof docsWithRequests)
     : docsWithRequests;
   if (businessRes.error) throw businessRes.error;
   if (clientsRes.error) throw clientsRes.error;
@@ -180,6 +220,8 @@ async function fetchAll(): Promise<AppData | null> {
         chequeNumber: d.cheque_number ?? undefined,
         relatedDocumentId:
           typeof row.related_document_id === "string" ? row.related_document_id : undefined,
+        creditReason: typeof row.credit_reason === "string" ? row.credit_reason : undefined,
+        printCount: typeof row.print_count === "number" ? row.print_count : 0,
         allocationRequested: Boolean(row.allocation_requested),
         allocationNumber:
           typeof row.allocation_number === "string" ? row.allocation_number : undefined,
@@ -199,6 +241,7 @@ async function fetchAll(): Promise<AppData | null> {
             description: String(i.description ?? ""),
             quantity: Number(i.quantity),
             unitPrice: Number(i.unit_price),
+            unit: typeof i.unit === "string" && i.unit.trim() ? i.unit : DEFAULT_UNIT,
           })),
       };
     }),
@@ -315,6 +358,7 @@ export const actions = {
       cheque_account: doc.chequeAccount ?? null,
       cheque_number: doc.chequeNumber ?? null,
       related_document_id: doc.relatedDocumentId ?? null,
+      credit_reason: doc.creditReason?.trim() || null,
       allocation_requested: doc.allocationRequested,
       allocation_number: doc.allocationNumber ?? null,
       allocation_requested_at: doc.allocationRequested
@@ -350,6 +394,7 @@ export const actions = {
         description: i.description,
         quantity: i.quantity,
         unit_price: i.unitPrice,
+        unit: i.unit.trim() || DEFAULT_UNIT,
         position: index,
       }));
     if (items.length) {
@@ -369,6 +414,16 @@ export const actions = {
     } finally {
       await refresh();
     }
+  },
+  /**
+   * Records a print of an issued document and returns its marking: "מקור" for
+   * the first copy and "העתק" for every other (appendix H (a)(4)).
+   */
+  async recordPrint(id: string): Promise<"מקור" | "העתק"> {
+    const { data, error } = await supabase.rpc("record_document_print", { _document_id: id });
+    if (error) throw error;
+    await refresh();
+    return data === "מקור" ? "מקור" : "העתק";
   },
   /** "continue" and "cancel" issue the invoice right away; "further_objection" keeps the draft. */
   async decideHeldInvoice(id: string, decision: AllocationDecision) {
@@ -405,7 +460,7 @@ export function emptyDoc(type: DocType, vatRate = 18): Doc {
     clientId: "",
     issueDate: today(),
     dueDate: plusDays(30),
-    items: [{ id: uid(), description: "", quantity: 1, unitPrice: 0 }],
+    items: [{ id: uid(), description: "", unit: DEFAULT_UNIT, quantity: 1, unitPrice: 0 }],
     vatRate,
     status: "draft",
     allocationRequested: false,

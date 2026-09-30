@@ -9,6 +9,7 @@ import {
   Plus,
   LogOut,
   FileSpreadsheet,
+  ClipboardList,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,6 +18,7 @@ const nav = [
   { to: "/documents", label: "מסמכים", icon: FileText },
   { to: "/clients", label: "לקוחות", icon: Users },
   { to: "/settings", label: "הגדרות עסק", icon: Settings },
+  { to: "/reports", label: "דוחות", icon: ClipboardList },
   { to: "/uniform-export", label: "מבנה אחיד", icon: FileSpreadsheet },
 ] as const;
 

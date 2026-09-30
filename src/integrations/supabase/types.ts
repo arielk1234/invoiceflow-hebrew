@@ -177,6 +177,7 @@ export type Database = {
           position: number
           quantity: number
           unit_price: number
+          unit: string
         }
         Insert: {
           created_at?: string
@@ -186,6 +187,7 @@ export type Database = {
           position?: number
           quantity?: number
           unit_price?: number
+          unit?: string
         }
         Update: {
           created_at?: string
@@ -195,6 +197,7 @@ export type Database = {
           position?: number
           quantity?: number
           unit_price?: number
+          unit?: string
         }
         Relationships: [
           {
@@ -299,6 +302,7 @@ export type Database = {
           cancelled_at: string | null
           client_id: string
           content_hash: string | null
+          credit_reason: string | null
           created_at: string
           created_by: string | null
           due_date: string
@@ -307,8 +311,10 @@ export type Database = {
           issued_at: string | null
           issued_by: string | null
           notes: string
+          original_printed_at: string | null
           number: string
           payment_method: string
+          print_count: number
           related_document_id: string | null
           status: Database["public"]["Enums"]["doc_status"]
           subtotal: number
@@ -333,6 +339,7 @@ export type Database = {
           cancelled_at?: string | null
           client_id: string
           content_hash?: string | null
+          credit_reason?: string | null
           created_at?: string
           created_by?: string | null
           due_date?: string
@@ -341,8 +348,10 @@ export type Database = {
           issued_at?: string | null
           issued_by?: string | null
           notes?: string
+          original_printed_at?: string | null
           number?: string
           payment_method?: string
+          print_count?: number
           related_document_id?: string | null
           status?: Database["public"]["Enums"]["doc_status"]
           subtotal?: number
@@ -367,6 +376,7 @@ export type Database = {
           cancelled_at?: string | null
           client_id?: string
           content_hash?: string | null
+          credit_reason?: string | null
           created_at?: string
           created_by?: string | null
           due_date?: string
@@ -375,8 +385,10 @@ export type Database = {
           issued_at?: string | null
           issued_by?: string | null
           notes?: string
+          original_printed_at?: string | null
           number?: string
           payment_method?: string
+          print_count?: number
           related_document_id?: string | null
           status?: Database["public"]["Enums"]["doc_status"]
           subtotal?: number
@@ -620,6 +632,10 @@ export type Database = {
           _type: Database["public"]["Enums"]["doc_type"]
           _year?: number
         }
+        Returns: string
+      }
+      record_document_print: {
+        Args: { _document_id: string }
         Returns: string
       }
       reserve_document_number: {

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { ReportFrame } from "@/components/ReportFrame";
 import { useData } from "@/lib/store";
 import {
   buildSimulatorFixture,
@@ -316,38 +317,42 @@ function UniformExportPage() {
               תעודת הרישום: {report.registrationNumber || "—"}, בתאריך: {report.producedDate}, בשעה:{" "}
               {report.producedTime}.
             </p>
+            <p className="mt-6 text-center text-sm font-semibold">*** סוף הפלט ***</p>
           </section>
 
           {/* Section 2.6: count and total of every document type in appendix 1. */}
-          <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm print:break-before-page print:border-0 print:shadow-none">
-            <h2 className="text-xl font-bold">פלט לאימות נתונים: מסמכים לפי סוג</h2>
-            <p className="mt-2 text-sm">
-              {report.businessName} · {report.businessTaxId} · {ddmmyyyy(report.fromDate)} –{" "}
-              {ddmmyyyy(report.toDate)}
-            </p>
-            <table className="mt-3 w-full border-collapse text-sm">
-              <thead>
-                <tr>
-                  <th className="border p-2 text-right">מספר המסמך</th>
-                  <th className="border p-2 text-right">סוג המסמך</th>
-                  <th className="border p-2 text-right">סה״כ כמותי</th>
-                  <th className="border p-2 text-right">סה״כ כספי (בש״ח)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.documents.map((row) => (
-                  <tr key={row.code}>
-                    <td className="border p-2">{row.code}</td>
-                    <td className="border p-2">{row.description}</td>
-                    <td className="border p-2">{row.count}</td>
-                    <td className="border p-2">
-                      {row.total.toLocaleString("he-IL", { minimumFractionDigits: 2 })}
-                    </td>
+          <div className="mt-6 print:break-before-page">
+            <ReportFrame
+              title="פלט לאימות נתונים: מסמכים לפי סוג"
+              businessName={report.businessName}
+              taxId={report.businessTaxId}
+              period={`${ddmmyyyy(report.fromDate)} – ${ddmmyyyy(report.toDate)}`}
+              producedAt={result.generatedAt}
+            >
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr>
+                    <th className="border p-2 text-right">מספר המסמך</th>
+                    <th className="border p-2 text-right">סוג המסמך</th>
+                    <th className="border p-2 text-right">סה״כ כמותי</th>
+                    <th className="border p-2 text-right">סה״כ כספי (בש״ח)</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+                </thead>
+                <tbody>
+                  {report.documents.map((row) => (
+                    <tr key={row.code}>
+                      <td className="border p-2">{row.code}</td>
+                      <td className="border p-2">{row.description}</td>
+                      <td className="border p-2">{row.count}</td>
+                      <td className="border p-2">
+                        {row.total.toLocaleString("he-IL", { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </ReportFrame>
+          </div>
         </>
       )}
     </AppShell>

@@ -156,8 +156,13 @@
 }
 
 @media print {
+  /* Every printed output numbers its pages (appendix H (a)(2) of the bookkeeping instructions). */
   @page {
     margin: 14mm;
+    @bottom-center {
+      content: "עמוד " counter(page) " מתוך " counter(pages);
+      font-size: 9pt;
+    }
   }
 
   body {

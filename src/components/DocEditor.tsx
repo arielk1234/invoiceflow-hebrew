@@ -6,6 +6,7 @@ import {
   actions,
   CHEQUE,
   chequeDetailsMissing,
+  DEFAULT_UNIT,
   isExemptBusiness,
   money,
   PAYMENT_METHODS,
@@ -71,6 +72,10 @@ export function DocEditor({
     }
     if (doc.type === "credit_note" && !doc.relatedDocumentId) {
       toast.error("חשבונית זיכוי חייבת להיות מקושרת למסמך המקורי");
+      return;
+    }
+    if (issueAfterSave && doc.type === "credit_note" && !doc.creditReason?.trim()) {
+      toast.error("יש לציין את סיבת הזיכוי");
       return;
     }
     const todayInIsrael = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" });
@@ -189,6 +194,13 @@ export function DocEditor({
                   </option>
                 ))}
             </select>
+            <label className={`${labelCls} mt-4`}>סיבת הזיכוי</label>
+            <input
+              className={field}
+              placeholder="לדוגמה: החזרת סחורה, תיקון מחיר"
+              value={doc.creditReason ?? ""}
+              onChange={(e) => set("creditReason", e.target.value)}
+            />
           </div>
         )}
       </section>
@@ -199,7 +211,7 @@ export function DocEditor({
           {doc.items.map((item) => (
             <div
               key={item.id}
-              className="grid items-end gap-3 rounded-xl bg-secondary/50 p-3 sm:grid-cols-[1fr_7rem_9rem_8rem_auto]"
+              className="grid items-end gap-3 rounded-xl bg-secondary/50 p-3 sm:grid-cols-[1fr_6rem_6rem_8rem_7rem_auto]"
             >
               <div>
                 <label className={labelCls}>תיאור</label>
@@ -208,6 +220,15 @@ export function DocEditor({
                   placeholder="לדוגמה: שירות מקצועי"
                   value={item.description}
                   onChange={(e) => updateItem(item.id, { description: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>יחידת מידה</label>
+                <input
+                  className={field}
+                  placeholder={DEFAULT_UNIT}
+                  value={item.unit}
+                  onChange={(e) => updateItem(item.id, { unit: e.target.value })}
                 />
               </div>
               <div>
@@ -254,7 +275,10 @@ export function DocEditor({
           onClick={() =>
             setDoc((d) => ({
               ...d,
-              items: [...d.items, { id: uid(), description: "", quantity: 1, unitPrice: 0 }],
+              items: [
+                ...d.items,
+                { id: uid(), description: "", unit: DEFAULT_UNIT, quantity: 1, unitPrice: 0 },
+              ],
             }))
           }
           className="mt-4 inline-flex items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-sm font-medium text-muted-foreground transition hover:border-ring hover:text-foreground"

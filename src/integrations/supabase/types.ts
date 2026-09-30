@@ -128,6 +128,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          is_vat_registered: boolean
           name: string
           phone: string
           tax_id: string
@@ -139,6 +140,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          is_vat_registered?: boolean
           name?: string
           phone?: string
           tax_id?: string
@@ -150,6 +152,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          is_vat_registered?: boolean
           name?: string
           phone?: string
           tax_id?: string
@@ -232,59 +235,155 @@ export type Database = {
           },
         ]
       }
-      documents: {
+      document_snapshots: {
         Row: {
           business_id: string
+          captured_at: string
+          captured_by: string | null
+          content_hash: string
+          document_id: string
+          id: string
+          payload: Json
+          snapshot_version: number
+        }
+        Insert: {
+          business_id: string
+          captured_at?: string
+          captured_by?: string | null
+          content_hash: string
+          document_id: string
+          id?: string
+          payload: Json
+          snapshot_version?: number
+        }
+        Update: {
+          business_id?: string
+          captured_at?: string
+          captured_by?: string | null
+          content_hash?: string
+          document_id?: string
+          id?: string
+          payload?: Json
+          snapshot_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_snapshots_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_snapshots_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          allocation_decision: string | null
+          allocation_decision_at: string | null
+          allocation_number: string | null
+          allocation_requested: boolean
+          allocation_requested_at: string | null
+          business_id: string
+          cancel_reason: string | null
+          cheque_account: string | null
+          cheque_bank: string | null
+          cheque_branch: string | null
+          cheque_number: string | null
           cancelled_at: string | null
           client_id: string
+          content_hash: string | null
           created_at: string
           created_by: string | null
           due_date: string
           id: string
           issue_date: string
           issued_at: string | null
+          issued_by: string | null
           notes: string
           number: string
           payment_method: string
+          related_document_id: string | null
           status: Database["public"]["Enums"]["doc_status"]
+          subtotal: number
+          total_amount: number
           type: Database["public"]["Enums"]["doc_type"]
           updated_at: string
+          vat_amount: number
           vat_rate: number
         }
         Insert: {
+          allocation_decision?: string | null
+          allocation_decision_at?: string | null
+          allocation_number?: string | null
+          allocation_requested?: boolean
+          allocation_requested_at?: string | null
           business_id: string
+          cancel_reason?: string | null
+          cheque_account?: string | null
+          cheque_bank?: string | null
+          cheque_branch?: string | null
+          cheque_number?: string | null
           cancelled_at?: string | null
           client_id: string
+          content_hash?: string | null
           created_at?: string
           created_by?: string | null
           due_date?: string
           id?: string
           issue_date?: string
           issued_at?: string | null
+          issued_by?: string | null
           notes?: string
           number?: string
           payment_method?: string
+          related_document_id?: string | null
           status?: Database["public"]["Enums"]["doc_status"]
+          subtotal?: number
+          total_amount?: number
           type?: Database["public"]["Enums"]["doc_type"]
           updated_at?: string
+          vat_amount?: number
           vat_rate?: number
         }
         Update: {
+          allocation_decision?: string | null
+          allocation_decision_at?: string | null
+          allocation_number?: string | null
+          allocation_requested?: boolean
+          allocation_requested_at?: string | null
           business_id?: string
+          cancel_reason?: string | null
+          cheque_account?: string | null
+          cheque_bank?: string | null
+          cheque_branch?: string | null
+          cheque_number?: string | null
           cancelled_at?: string | null
           client_id?: string
+          content_hash?: string | null
           created_at?: string
           created_by?: string | null
           due_date?: string
           id?: string
           issue_date?: string
           issued_at?: string | null
+          issued_by?: string | null
           notes?: string
           number?: string
           payment_method?: string
+          related_document_id?: string | null
           status?: Database["public"]["Enums"]["doc_status"]
+          subtotal?: number
+          total_amount?: number
           type?: Database["public"]["Enums"]["doc_type"]
           updated_at?: string
+          vat_amount?: number
           vat_rate?: number
         }
         Relationships: [
@@ -301,6 +400,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id", "business_id"]
+          },
+          {
+            foreignKeyName: "documents_related_document_id_fkey"
+            columns: ["related_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -337,11 +443,129 @@ export type Database = {
         }
         Relationships: []
       }
+      tax_authority_connections: {
+        Row: {
+          access_token_ciphertext: string | null
+          access_token_expires_at: string | null
+          business_id: string
+          connected_by: string | null
+          created_at: string
+          environment: string
+          id: string
+          provider: string
+          refresh_token_ciphertext: string | null
+          scope: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token_ciphertext?: string | null
+          access_token_expires_at?: string | null
+          business_id: string
+          connected_by?: string | null
+          created_at?: string
+          environment?: string
+          id?: string
+          provider?: string
+          refresh_token_ciphertext?: string | null
+          scope?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token_ciphertext?: string | null
+          access_token_expires_at?: string | null
+          business_id?: string
+          connected_by?: string | null
+          created_at?: string
+          environment?: string
+          id?: string
+          provider?: string
+          refresh_token_ciphertext?: string | null
+          scope?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_authority_connections_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_authority_requests: {
+        Row: {
+          business_id: string
+          created_at: string
+          document_id: string
+          error_code: string | null
+          error_message: string | null
+          external_reference: string | null
+          id: string
+          idempotency_key: string
+          request_kind: string
+          response_payload: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          document_id: string
+          error_code?: string | null
+          error_message?: string | null
+          external_reference?: string | null
+          id?: string
+          idempotency_key: string
+          request_kind: string
+          response_payload?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          document_id?: string
+          error_code?: string | null
+          error_message?: string | null
+          external_reference?: string | null
+          id?: string
+          idempotency_key?: string
+          request_kind?: string
+          response_payload?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_authority_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_authority_requests_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      begin_tax_authority_request: {
+        Args: { _document_id: string; _idempotency_key: string }
+        Returns: Database["public"]["Tables"]["tax_authority_requests"]["Row"]
+      }
+      calculate_document_totals: {
+        Args: { p_document_id: string }
+        Returns: { subtotal: number; total_amount: number; vat_amount: number }[]
+      }
       can_access_document: { Args: { _document_id: string }; Returns: boolean }
       cancel_document: {
         Args: { _document_id: string; _reason?: string }
@@ -358,6 +582,16 @@ export type Database = {
         }
         Returns: string
       }
+      get_tax_authority_connection_status: {
+        Args: { _business_id: string; _environment: string }
+        Returns: {
+          connected: boolean
+          connected_at: string
+          environment: string
+          expires_at: string
+          scope: string
+        }[]
+      }
       has_business_role: {
         Args: {
           _business_id: string
@@ -366,6 +600,10 @@ export type Database = {
         Returns: boolean
       }
       is_business_member: { Args: { _business_id: string }; Returns: boolean }
+      issue_document: {
+        Args: { _document_id: string }
+        Returns: Database["public"]["Tables"]["documents"]["Row"]
+      }
       log_audit: {
         Args: {
           _action: string
@@ -380,15 +618,31 @@ export type Database = {
         Args: {
           _business_id: string
           _type: Database["public"]["Enums"]["doc_type"]
+          _year?: number
         }
         Returns: string
+      }
+      reserve_document_number: {
+        Args: { _document_id: string }
+        Returns: string
+      }
+      update_tax_authority_request: {
+        Args: {
+          _error_code?: string
+          _error_message?: string
+          _external_reference?: string
+          _request_id: string
+          _response_payload?: Json
+          _status: string
+        }
+        Returns: Database["public"]["Tables"]["tax_authority_requests"]["Row"]
       }
     }
     Enums: {
       business_role: "owner" | "admin" | "user"
       business_type: "osek_patur" | "osek_murshe" | "company"
       doc_status: "draft" | "issued" | "sent" | "paid" | "cancelled"
-      doc_type: "invoice" | "receipt"
+      doc_type: "invoice" | "receipt" | "credit_note"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -519,7 +773,7 @@ export const Constants = {
       business_role: ["owner", "admin", "user"],
       business_type: ["osek_patur", "osek_murshe", "company"],
       doc_status: ["draft", "issued", "sent", "paid", "cancelled"],
-      doc_type: ["invoice", "receipt"],
+      doc_type: ["invoice", "receipt", "credit_note"],
     },
   },
 } as const

@@ -1,15 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Clock, CheckCircle2, FileEdit, Wallet, FileSpreadsheet } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import {
-  dateHe,
-  money,
-  statusLabel,
-  totals,
-  typeLabel,
-  useData,
-  type DocStatus,
-} from "@/lib/store";
+import { dateHe, money, statusLabel, totals, typeLabel, useData, type Doc } from "@/lib/store";
 import { StatusBadge } from "@/components/StatusBadge";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -36,14 +28,31 @@ function Dashboard() {
   if (!data) return <AppShell>טוען…</AppShell>;
 
   const docs = data.docs;
-  const sum = (s: DocStatus) =>
-    docs.filter((d) => d.status === s).reduce((a, d) => a + totals(d).total, 0);
+  // Drafts are not final and cancelled documents are void, so neither counts.
+  const issued = docs.filter((d) => d.status !== "draft" && d.status !== "cancelled");
+  // Issued documents carry server-calculated totals; credit notes reduce the sums.
+  const amount = (d: Doc) => {
+    const total = d.totalAmount ?? totals(d).total;
+    return d.type === "credit_note" ? -total : total;
+  };
+  const sum = (list: Doc[]) => list.reduce((a, d) => a + amount(d), 0);
+  const awaitingPayment = issued.filter(
+    (d) => d.type === "invoice" && (d.status === "issued" || d.status === "sent"),
+  );
 
   const stats = [
-    { label: "סה״כ הופק", value: money(docs.reduce((a, d) => a + totals(d).total, 0)), icon: Wallet },
-    { label: "ממתין לתשלום", value: money(sum("sent")), icon: Clock },
-    { label: "שולם", value: money(sum("paid")), icon: CheckCircle2 },
-    { label: "טיוטות", value: String(docs.filter((d) => d.status === "draft").length), icon: FileEdit },
+    { label: "סה״כ הופק", value: money(sum(issued)), icon: Wallet },
+    { label: "ממתין לתשלום", value: money(sum(awaitingPayment)), icon: Clock },
+    {
+      label: "שולם",
+      value: money(sum(issued.filter((d) => d.status === "paid"))),
+      icon: CheckCircle2,
+    },
+    {
+      label: "טיוטות",
+      value: String(docs.filter((d) => d.status === "draft").length),
+      icon: FileEdit,
+    },
   ];
 
   const recent = [...docs].slice(0, 6);
@@ -118,9 +127,7 @@ function Dashboard() {
                     <span className="flex-1 text-sm text-muted-foreground">
                       {client?.name ?? "—"}
                     </span>
-                    <span className="text-sm text-muted-foreground">
-                      {dateHe(d.issueDate)}
-                    </span>
+                    <span className="text-sm text-muted-foreground">{dateHe(d.issueDate)}</span>
                     <StatusBadge status={d.status} />
                     <span className="w-28 text-left text-sm font-bold text-foreground">
                       {money(totals(d).total)}

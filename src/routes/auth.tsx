@@ -11,8 +11,7 @@ export const Route = createFileRoute("/auth")({
       { title: "כניסה והרשמה — חשבונית קלה" },
       {
         name: "description",
-        content:
-          "התחברות או פתיחת חשבון חדש במערכת חשבונית קלה להפקת חשבוניות וקבלות בעברית.",
+        content: "התחברות או פתיחת חשבון חדש במערכת חשבונית קלה להפקת חשבוניות וקבלות בעברית.",
       },
       { property: "og:title", content: "כניסה והרשמה — חשבונית קלה" },
       {
@@ -111,9 +110,7 @@ function AuthPage() {
           <span className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
             <FileText className="size-5" />
           </span>
-          <span className="text-xl font-bold tracking-tight text-foreground">
-            חשבונית קלה
-          </span>
+          <span className="text-xl font-bold tracking-tight text-foreground">חשבונית קלה</span>
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
@@ -124,9 +121,7 @@ function AuthPage() {
                 type="button"
                 onClick={() => setMode(m)}
                 className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                  mode === m
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground"
+                  mode === m ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
                 }`}
               >
                 {m === "signin" ? "התחברות" : "הרשמה"}
@@ -162,9 +157,7 @@ function AuthPage() {
                       className={field}
                       value={businessType}
                       onChange={(e) =>
-                        setBusinessType(
-                          e.target.value as (typeof businessTypes)[number]["value"],
-                        )
+                        setBusinessType(e.target.value as (typeof businessTypes)[number]["value"])
                       }
                     >
                       {businessTypes.map((t) => (

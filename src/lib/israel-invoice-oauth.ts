@@ -1,6 +1,12 @@
-import { createHmac, randomBytes, timingSafeEqual, createCipheriv, createDecipheriv } from "node:crypto";
-import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
+// Server-only: uses node:crypto. Import it only from server code or from
+// inside server function handlers (see israel-invoice-connection.ts).
+import {
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+  createCipheriv,
+  createDecipheriv,
+} from "node:crypto";
 
 const STATE_TTL_SECONDS = 10 * 60;
 
@@ -18,6 +24,14 @@ function env(name: string): string {
   return value;
 }
 
+/**
+ * The Tax Authority environment is server configuration only, so a client can
+ * never pair production credentials with Sandbox or the other way around.
+ */
+export function israelInvoiceEnvironment(): "sandbox" | "production" {
+  return process.env.ISRAEL_INVOICE_API_ENVIRONMENT === "production" ? "production" : "sandbox";
+}
+
 function baseUrl(environment: "sandbox" | "production") {
   return environment === "production"
     ? "https://openapi.taxes.gov.il/shaam/production"
@@ -28,7 +42,7 @@ function tokenUrl(environment: "sandbox" | "production") {
   return `${baseUrl(environment)}/longtimetoken/oauth2/token`;
 }
 
-function authorizeUrl(environment: "sandbox" | "production", state: string) {
+export function authorizeUrl(environment: "sandbox" | "production", state: string) {
   const url = new URL(`${baseUrl(environment)}/longtimetoken/oauth2/authorize`);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("client_id", env("ISRAEL_INVOICE_CLIENT_ID"));
@@ -40,8 +54,51 @@ function authorizeUrl(environment: "sandbox" | "production", state: string) {
 
 function encryptionKey(): Buffer {
   const raw = Buffer.from(env("ISRAEL_INVOICE_TOKEN_ENCRYPTION_KEY"), "base64");
-  if (raw.length !== 32) throw new Error("ISRAEL_INVOICE_TOKEN_ENCRYPTION_KEY_MUST_BE_32_BYTES_BASE64");
+  if (raw.length !== 32)
+    throw new Error("ISRAEL_INVOICE_TOKEN_ENCRYPTION_KEY_MUST_BE_32_BYTES_BASE64");
   return raw;
+}
+
+export type IsraelInvoiceSetupStatus = {
+  /** The registered redirect URI is public; it is shown so it can be matched against the portal. */
+  redirectUri: string | null;
+  checks: {
+    clientId: boolean;
+    clientSecret: boolean;
+    scope: boolean;
+    redirectUri: boolean;
+    stateSecret: boolean;
+    encryptionKey: boolean;
+    serviceRoleKey: boolean;
+  };
+  /** null when not set: the business's VAT number is reported instead. */
+  softwareRegistrationNumberValid: boolean | null;
+};
+
+/** Which server settings are in place, without revealing any secret value. */
+export function israelInvoiceSetupStatus(): IsraelInvoiceSetupStatus {
+  const has = (name: string) => Boolean(process.env[name]?.trim());
+  let encryptionKeyValid = false;
+  try {
+    encryptionKey();
+    encryptionKeyValid = true;
+  } catch {
+    // Reported as a failed check.
+  }
+  const registration = process.env.ISRAEL_INVOICE_SOFTWARE_REGISTRATION_NUMBER?.trim();
+  return {
+    redirectUri: process.env.ISRAEL_INVOICE_REDIRECT_URI?.trim() || null,
+    checks: {
+      clientId: has("ISRAEL_INVOICE_CLIENT_ID"),
+      clientSecret: has("ISRAEL_INVOICE_CLIENT_SECRET"),
+      scope: has("ISRAEL_INVOICE_SCOPE"),
+      redirectUri: has("ISRAEL_INVOICE_REDIRECT_URI"),
+      stateSecret: has("ISRAEL_INVOICE_OAUTH_STATE_SECRET"),
+      encryptionKey: encryptionKeyValid,
+      serviceRoleKey: has("SUPABASE_SERVICE_ROLE_KEY"),
+    },
+    softwareRegistrationNumberValid: registration ? /^\d{8,9}$/.test(registration) : null,
+  };
 }
 
 export function encryptSecret(value: string): string {
@@ -56,9 +113,16 @@ export function encryptSecret(value: string): string {
 export function decryptSecret(value: string): string {
   const [ivRaw, tagRaw, ciphertextRaw] = value.split(".");
   if (!ivRaw || !tagRaw || !ciphertextRaw) throw new Error("INVALID_ENCRYPTED_SECRET");
-  const decipher = createDecipheriv("aes-256-gcm", encryptionKey(), Buffer.from(ivRaw, "base64url"));
+  const decipher = createDecipheriv(
+    "aes-256-gcm",
+    encryptionKey(),
+    Buffer.from(ivRaw, "base64url"),
+  );
   decipher.setAuthTag(Buffer.from(tagRaw, "base64url"));
-  return Buffer.concat([decipher.update(Buffer.from(ciphertextRaw, "base64url")), decipher.final()]).toString("utf8");
+  return Buffer.concat([
+    decipher.update(Buffer.from(ciphertextRaw, "base64url")),
+    decipher.final(),
+  ]).toString("utf8");
 }
 
 function signState(payload: string): string {
@@ -67,7 +131,11 @@ function signState(payload: string): string {
     .digest("base64url");
 }
 
-function createState(businessId: string, userId: string, environment: "sandbox" | "production") {
+export function createState(
+  businessId: string,
+  userId: string,
+  environment: "sandbox" | "production",
+) {
   const payload = JSON.stringify({
     businessId,
     userId,
@@ -86,12 +154,20 @@ export function verifyState(state: string) {
   const a = Buffer.from(signature);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) throw new Error("INVALID_OAUTH_STATE");
-  const parsed = JSON.parse(payload) as { businessId: string; userId: string; environment: "sandbox" | "production"; exp: number };
+  const parsed = JSON.parse(payload) as {
+    businessId: string;
+    userId: string;
+    environment: "sandbox" | "production";
+    exp: number;
+  };
   if (parsed.exp < Math.floor(Date.now() / 1000)) throw new Error("OAUTH_STATE_EXPIRED");
   return parsed;
 }
 
-export async function exchangeAuthorizationCode(environment: "sandbox" | "production", code: string) {
+export async function exchangeAuthorizationCode(
+  environment: "sandbox" | "production",
+  code: string,
+) {
   const credentials = Buffer.from(
     `${env("ISRAEL_INVOICE_CLIENT_ID")}:${env("ISRAEL_INVOICE_CLIENT_SECRET")}`,
   ).toString("base64");
@@ -113,14 +189,18 @@ export async function exchangeAuthorizationCode(environment: "sandbox" | "produc
     body,
   });
 
-  const payload = (await response.json().catch(() => null)) as OAuthTokenResponse | { error?: string } | null;
+  const payload = (await response.json().catch(() => null)) as
+    OAuthTokenResponse | { error?: string } | null;
   if (!response.ok || !payload || !("access_token" in payload) || !payload.access_token) {
     throw new Error(`ISRAEL_INVOICE_OAUTH_TOKEN_ERROR_${response.status}`);
   }
   return payload;
 }
 
-export async function refreshAccessToken(environment: "sandbox" | "production", refreshToken: string) {
+export async function refreshAccessToken(
+  environment: "sandbox" | "production",
+  refreshToken: string,
+) {
   const body = new URLSearchParams({
     client_id: env("ISRAEL_INVOICE_CLIENT_ID"),
     client_secret: env("ISRAEL_INVOICE_CLIENT_SECRET"),
@@ -144,36 +224,3 @@ export async function refreshAccessToken(environment: "sandbox" | "production", 
   }
   return payload;
 }
-
-const startSchema = z.object({
-  businessId: z.string().uuid(),
-  environment: z.enum(["sandbox", "production"]),
-  accessToken: z.string().min(20),
-});
-
-export const startIsraelInvoiceOAuth = createServerFn({ method: "POST" })
-  .validator(startSchema)
-  .handler(async ({ data }) => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
-      env("SUPABASE_URL"),
-      env("SUPABASE_PUBLISHABLE_KEY"),
-      { auth: { persistSession: false, autoRefreshToken: false }, global: { headers: { Authorization: `Bearer ${data.accessToken}` } } },
-    );
-
-    const { data: userResult, error: userError } = await supabase.auth.getUser(data.accessToken);
-    if (userError || !userResult.user) throw new Error("AUTH_REQUIRED");
-
-    const { data: membership, error } = await supabase
-      .from("business_members")
-      .select("business_id, role")
-      .eq("business_id", data.businessId)
-      .eq("user_id", userResult.user.id)
-      .single();
-
-    if (error || !membership || !["owner", "admin"].includes(membership.role)) {
-      throw new Error("FORBIDDEN");
-    }
-
-    return { authorizationUrl: authorizeUrl(data.environment, createState(data.businessId, userResult.user.id, data.environment)) };
-  });

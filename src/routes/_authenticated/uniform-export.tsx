@@ -65,15 +65,16 @@ function UniformExportPage() {
   const [result, setResult] = useState<UniformExportResult | null>(null);
   const [simulator, setSimulator] = useState<ReturnType<typeof buildSimulatorFixture> | null>(null);
 
-  // The software producer's details; the registration number exists only after
-  // the Tax Authority registers the software, and is zeros until then.
+  // The software producer's details (the same for every business using the
+  // software); the registration number exists only after the Tax Authority
+  // registers the software, and is zeros until then.
   const config = useMemo<UniformExportConfig>(
     () => ({
       registrationNumber: import.meta.env.VITE_UNIFORM_SOFTWARE_REGISTRATION_NUMBER || "",
       softwareName: import.meta.env.VITE_UNIFORM_SOFTWARE_NAME || "InvoiceFlow",
       softwareVersion: import.meta.env.VITE_UNIFORM_SOFTWARE_VERSION || "1.0",
-      manufacturerTaxId: import.meta.env.VITE_UNIFORM_MANUFACTURER_TAX_ID || "",
-      manufacturerName: import.meta.env.VITE_UNIFORM_MANUFACTURER_NAME || "",
+      manufacturerTaxId: import.meta.env.VITE_UNIFORM_MANUFACTURER_TAX_ID || "206477515",
+      manufacturerName: import.meta.env.VITE_UNIFORM_MANUFACTURER_NAME || "אריאל קלרמן",
       softwareType: 2,
       accountingType: 0,
       compressionProgram: "ZIP",

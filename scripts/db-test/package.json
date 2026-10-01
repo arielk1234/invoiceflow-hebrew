@@ -1,0 +1,9 @@
+{
+  "name": "invoiceflow-db-test",
+  "private": true,
+  "type": "module",
+  "description": "Applies every migration to an in-memory Postgres (PGlite) and runs an invoicing scenario.",
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.8"
+  }
+}

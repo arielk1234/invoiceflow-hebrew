@@ -32,11 +32,14 @@ const businessTypes = [
   { value: "company", label: "חברה בע״מ" },
 ] as const;
 
+const sameEmail = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
 function AuthPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [busy, setBusy] = useState(false);
   const [email, setEmail] = useState("");
+  const [emailConfirm, setEmailConfirm] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -53,6 +56,12 @@ function AuthPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Signup no longer sends a verification email, so a typo would lock the user
+    // out of password recovery; asking for the address twice catches it.
+    if (mode === "signup" && !sameEmail(email, emailConfirm)) {
+      toast.error("כתובות הדוא״ל אינן זהות. יש להקליד את אותה כתובת פעמיים.");
+      return;
+    }
     setBusy(true);
     try {
       if (mode === "signin") {
@@ -177,6 +186,24 @@ function AuthPage() {
                 required
               />
             </div>
+            {mode === "signup" && (
+              <div>
+                <label className={labelCls}>אימות דוא״ל</label>
+                <input
+                  type="email"
+                  dir="ltr"
+                  className={field}
+                  value={emailConfirm}
+                  onChange={(e) => setEmailConfirm(e.target.value)}
+                  onPaste={(e) => e.preventDefault()}
+                  autoComplete="off"
+                  required
+                />
+                {emailConfirm && !sameEmail(email, emailConfirm) && (
+                  <p className="mt-1 text-xs text-destructive">הכתובות אינן זהות</p>
+                )}
+              </div>
+            )}
             <div>
               <label className={labelCls}>סיסמה</label>
               <div className="relative">

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { FileText, Loader2 } from "lucide-react";
+import { Eye, EyeOff, FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth")({
@@ -38,6 +38,7 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [businessType, setBusinessType] =
@@ -178,15 +179,26 @@ function AuthPage() {
             </div>
             <div>
               <label className={labelCls}>סיסמה</label>
-              <input
-                type="password"
-                dir="ltr"
-                className={field}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                minLength={6}
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  dir="ltr"
+                  className={`${field} pl-10`}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  minLength={6}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "הסתרת הסיסמה" : "הצגת הסיסמה"}
+                  aria-pressed={showPassword}
+                  className="absolute inset-y-0 left-0 grid w-10 place-items-center text-muted-foreground transition hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
             </div>
 
             <button

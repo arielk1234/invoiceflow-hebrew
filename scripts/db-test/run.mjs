@@ -60,6 +60,15 @@ async function step(name, fn, expectError) {
 }
 
 const biz = await step("create business", async () => (await one(U1, `select public.create_business('עסק בדיקה', '777777715', 'company') as id`)).id);
+// A new business starts from zero: no documents, clients or numbering of its own.
+const emptyBusiness = async (id) => {
+  const r = await one("service", `select (select count(*) from public.documents where business_id = $1)::int as documents,
+                                         (select count(*) from public.clients where business_id = $1)::int as clients,
+                                         (select count(*) from public.document_sequences where business_id = $1)::int as sequences`, [id]);
+  if (r.documents || r.clients || r.sequences) throw new Error(`NOT_EMPTY ${JSON.stringify(r)}`);
+  return r;
+};
+await step("new business starts empty", () => emptyBusiness(biz));
 await db.exec(`insert into public.business_members (business_id, user_id, role) values ('${biz}', '${U2}', 'user')`);
 const client = await step("create client", async () => (await one(U1, `insert into public.clients (business_id, name, tax_id, is_vat_registered) values ($1, 'לקוח', '199999996', true) returning id`, [biz])).id);
 const newDraft = async (type, extra = {}) => {
@@ -73,11 +82,25 @@ const issue = async (id) => (await one(U1, `select (public.issue_document($1)).n
 // Numbering, issuance, immutability
 const d1 = await step("draft invoice has no number", () => newDraft("invoice"));
 await step("user cannot set a draft number", async () => { await as(U1, `update public.documents set number = 'X' where id = $1`, [d1.id]); return (await one(U1, `select number from public.documents where id = $1`, [d1.id])).number; });
-await step("issue invoice", () => issue(d1.id));
+await step("first invoice of a new business is number 1", async () => {
+  const number = await issue(d1.id);
+  if (!number.endsWith("-000001")) throw new Error(`UNEXPECTED_NUMBER ${number}`);
+  return number;
+});
 await step("issued invoice cannot be edited", () => as(U1, `update public.documents set vat_rate = 0 where id = $1`, [d1.id]), "LOCKED");
 await step("issued line unit cannot be edited", () => as(U1, `update public.document_items set unit = 'x' where document_id = $1`, [d1.id]), "LOCKED");
 await step("user cannot issue by a direct update", async () => { const d = await newDraft("invoice"); return as(U1, `update public.documents set status = 'issued' where id = $1`, [d.id]); }, "INVALID_STATUS_TRANSITION");
 await step("audit and snapshot recorded", async () => (await one(U1, `select count(*)::int as n from public.document_snapshots where business_id = $1`, [biz])).n);
+await step("another new business also starts from zero", async () => {
+  const other = (await one(U2, `select public.create_business('עסק חדש', '999999998', 'osek_murshe') as id`)).id;
+  await emptyBusiness(other);
+  const c = (await one(U2, `insert into public.clients (business_id, name, tax_id, is_vat_registered) values ($1, 'לקוח', '199999996', true) returning id`, [other])).id;
+  const d = (await one(U2, `insert into public.documents (business_id, client_id, type, issue_date) values ($1, $2, 'invoice', current_date) returning id`, [other, c])).id;
+  await as(U2, `insert into public.document_items (document_id, description, quantity, unit_price, position, unit) values ($1, 'שירות', 1, 100, 0, 'יחידה')`, [d]);
+  const number = (await one(U2, `select (public.issue_document($1)).number`, [d])).number;
+  if (!number.endsWith("-000001")) throw new Error(`UNEXPECTED_NUMBER ${number}`);
+  return number;
+});
 
 // Appendix H: original / copy
 await step("draft cannot be printed as a document", async () => one(U1, `select public.record_document_print($1) as l`, [(await newDraft("receipt")).id]), "DRAFT_IS_NOT_A_DOCUMENT");

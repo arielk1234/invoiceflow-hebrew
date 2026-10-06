@@ -3,7 +3,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -87,20 +86,6 @@ function AuthPage() {
     } finally {
       setBusy(false);
     }
-  }
-
-  async function handleGoogle() {
-    setBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      setBusy(false);
-      toast.error("הכניסה עם גוגל נכשלה");
-      return;
-    }
-    if (result.redirected) return;
-    navigate({ to: "/", replace: true });
   }
 
   return (
@@ -213,21 +198,6 @@ function AuthPage() {
               {mode === "signin" ? "כניסה" : "יצירת חשבון"}
             </button>
           </form>
-
-          <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" />
-            או
-            <span className="h-px flex-1 bg-border" />
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGoogle}
-            disabled={busy}
-            className="w-full rounded-lg border border-input bg-card px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-secondary disabled:opacity-60"
-          >
-            המשך עם Google
-          </button>
         </div>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">

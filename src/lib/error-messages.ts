@@ -47,6 +47,21 @@ const MESSAGES: Array<[code: string, message: string]> = [
     "ISRAEL_INVOICE_OAUTH_NOT_CONNECTED",
     "העסק עדיין לא מחובר לרשות המסים. אפשר להתחבר בעמוד הגדרות העסק.",
   ],
+  // Transmitting the Uniform Format files (Supplement 1, 3.2026)
+  [
+    "UNIFORM_FILE_TOO_LARGE",
+    "הקובץ גדול מהגודל שרשות המסים מאפשרת לעסק הזה. אפשר לפנות אליהם ב-APISupport@taxes.gov.il.",
+  ],
+  ["UNIFORM_UPLOAD_FAILED", "העלאת הקבצים לרשות המסים נכשלה. כדאי לנסות שוב בעוד כמה דקות."],
+  [
+    "UNIFORM_TRANSMISSION_FAILED",
+    "רשות המסים לא אישרה את שידור הקבצים. כדאי לנסות שוב בעוד כמה דקות.",
+  ],
+  [
+    "UNIFORM_TRANSMISSION_FORBIDDEN",
+    "למשתמש שחובר לרשות המסים אין הרשאה לשדר קבצים עבור מספר העוסק של העסק",
+  ],
+  ["UNIFORM_STATUS_FAILED", "לא ניתן לבדוק כרגע את מצב הקליטה ברשות המסים"],
   [
     "ISRAEL_INVOICE_OAUTH_UNAUTHORIZED",
     "רשות המסים לא אישרה את החיבור הקיים. יש להתחבר מחדש בעמוד הגדרות העסק.",

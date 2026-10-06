@@ -27,3 +27,5 @@ Allocation numbers are requested from the Approval V2 service (`/shaam/{tsandbox
 OAuth redirect URI must exactly match the URI registered for the InvoiceFlow application with the Tax Authority.
 
 The OAuth token endpoint and authorization endpoint are selected by environment in code. Production credentials must never be used against Sandbox, and Sandbox credentials must never be used against Production.
+
+The same OAuth connection also transmits the Uniform Format files, per "Supplement 1 to the Uniform Format instructions" (תוספת מס' 1, 3.2026): `UniStructFileUploadLinksApi/v1/UploadingFile/GetUrlsForUploadingFiles` and `FilesStatusApi/v1/Files/get-file-status` (see `src/lib/uniform-transmission.ts`). The InvoiceFlow application in the Tax Authority developer portal must be subscribed to these two APIs as well. As of the March 2026 edition only the Sandbox was open; in the Sandbox only PDF files up to 1 MB are accepted.

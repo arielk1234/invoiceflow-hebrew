@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { ReportFrame } from "@/components/ReportFrame";
+import { UniformTransmission } from "@/components/UniformTransmission";
 import { useData } from "@/lib/store";
 import {
   buildSimulatorFixture,
@@ -63,6 +64,8 @@ function UniformExportPage() {
   const [toDate, setToDate] = useState(today);
   const [error, setError] = useState("");
   const [result, setResult] = useState<UniformExportResult | null>(null);
+  // The period the current files were produced for, which is the period transmitted.
+  const [producedRange, setProducedRange] = useState({ from: fromDate, to: toDate });
   const [simulator, setSimulator] = useState<ReturnType<typeof buildSimulatorFixture> | null>(null);
 
   // The software producer's details (the same for every business using the
@@ -102,6 +105,7 @@ function UniformExportPage() {
       const next = exportUniformFormat(input);
       const errors = validateUniformExportText(next);
       if (errors.length) throw new Error(errors.join(","));
+      setProducedRange({ from: fromDate, to: toDate });
       setResult(next);
     } catch (e) {
       setResult(null);
@@ -281,6 +285,13 @@ function UniformExportPage() {
               </button>
             </div>
           </section>
+
+          <UniformTransmission
+            businessId={data.businessId}
+            fromDate={producedRange.from}
+            toDate={producedRange.to}
+            result={result}
+          />
 
           {/* Appendix 4 (section 5.4): the report printed when the files are produced. */}
           <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm print:border-0 print:shadow-none">

@@ -36,7 +36,7 @@ const inputSchema = z.object({
 type RequestRow = Database["public"]["Tables"]["tax_authority_requests"]["Row"];
 type BusinessRow = Database["public"]["Tables"]["businesses"]["Row"];
 
-function createServerSupabase(accessToken: string) {
+export function createServerSupabase(accessToken: string) {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) throw new Error("SUPABASE_SERVER_CONFIGURATION_MISSING");
@@ -49,7 +49,7 @@ function createServerSupabase(accessToken: string) {
   });
 }
 
-function createAdminSupabase() {
+export function createAdminSupabase() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error("SUPABASE_SERVER_CONFIGURATION_MISSING");
@@ -61,7 +61,7 @@ function createAdminSupabase() {
 type AdminSupabase = ReturnType<typeof createAdminSupabase>;
 
 /** Returns a valid Tax Authority access token for the business, refreshing it when needed. */
-async function taxAuthorityAccessToken(
+export async function taxAuthorityAccessToken(
   admin: AdminSupabase,
   businessId: string,
   environment: "sandbox" | "production",

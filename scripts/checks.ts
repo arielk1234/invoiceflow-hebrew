@@ -135,6 +135,34 @@ const codes = new Set(lines.map((l) => l.slice(0, 4)));
 for (const c of ["A100", "B110", "C100", "D110", "D120", "Z900"])
   assert.ok(codes.has(c), `missing ${c}`);
 assert.ok(!codes.has("100C") && !codes.has("110D"), "reversed record codes");
+// The printouts of sections 2.6 and 5.4 must agree with the simulator report, i.e. with the
+// records of the very same file (the Tax Authority rejected a request where they did not).
+{
+  const report = fixture.printReport;
+  const c100 = lines.filter((l) => l.startsWith("C100"));
+  const byType = new Map<number, { count: number; cents: number }>();
+  for (const l of c100) {
+    const type = Number(l.slice(22, 25));
+    const sign = l[347] === "-" ? -1 : 1;
+    const row = byType.get(type) ?? { count: 0, cents: 0 };
+    row.count += 1;
+    row.cents += sign * Number(l.slice(348, 362));
+    byType.set(type, row);
+  }
+  for (const row of report.documents) {
+    const actual = byType.get(row.code) ?? { count: 0, cents: 0 };
+    assert.equal(row.count, actual.count, `2.6 count of type ${row.code}`);
+    assert.equal(Math.round(row.total * 100), actual.cents, `2.6 total of type ${row.code}`);
+  }
+  assert.equal(
+    report.documents.reduce((sum, row) => sum + row.count, 0),
+    c100.length,
+    "2.6 documents add up to the C100 records",
+  );
+  assert.equal(report.records.find((r) => r.code === "C100")?.count, c100.length, "5.4 C100");
+  assert.equal(report.recordsTotal, fixture.simulatorRecords, "5.4 total is the simulator total");
+  assert.equal(report.recordsTotal, lines.length, "5.4 total is every BKMVDATA record");
+}
 // Every cheque payment carries bank/branch/account/cheque number (1307-1310).
 for (const l of lines.filter((x) => x.startsWith("D120") && x[49] === "2"))
   assert.ok(!/^0+$/.test(l.slice(50, 60)) && !/^0+$/.test(l.slice(85, 95)), "cheque details");

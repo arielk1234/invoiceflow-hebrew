@@ -617,6 +617,8 @@ export type SimulatorFixtureResult = UniformExportResult & {
   simulatorRecords: number;
   simulatorBytes: number;
   documentTypesCovered: number[];
+  /** The printouts of sections 2.6 and 5.4 for this very file, so they match the simulator report. */
+  printReport: UniformPrintReport;
 };
 
 /** A 9-digit number with a valid Israeli check digit, for test customers. */
@@ -735,7 +737,8 @@ export function buildSimulatorFixture(input: UniformExportInput): SimulatorFixtu
     );
   }
 
-  const result = exportUniformFormat({ ...input, toDate, generatedAt: now, clients, docs });
+  const fixtureInput = { ...input, toDate, generatedAt: now, clients, docs };
+  const result = exportUniformFormat(fixtureInput);
   const records = result.bkmvdataText.split(CRLF).filter(Boolean).length;
   const bytes = toUniformDownloadBytes(result.bkmvdataText).byteLength;
   const errors = [
@@ -748,6 +751,7 @@ export function buildSimulatorFixture(input: UniformExportInput): SimulatorFixtu
     simulatorRecords: records,
     simulatorBytes: bytes,
     documentTypesCovered: [DOC_TYPE.invoice, DOC_TYPE.credit_note, DOC_TYPE.receipt],
+    printReport: buildUniformPrintReport(fixtureInput, result),
   };
 }
 
@@ -777,6 +781,8 @@ export function buildUniformPrintReport(input: UniformExportInput, result: Unifo
     }));
   const started = israelDateTime(result.generatedAt);
   return {
+    // The simulator's "total records" is the sum of these rows (appendix 4, section 5.4).
+    recordsTotal: records.reduce((sum, row) => sum + row.count, 0),
     businessTaxId: input.business.taxId,
     businessName: input.business.name,
     fromDate: input.fromDate,
@@ -792,6 +798,8 @@ export function buildUniformPrintReport(input: UniformExportInput, result: Unifo
     producedTime: `${started.time.slice(0, 2)}:${started.time.slice(2, 4)}`,
   };
 }
+
+export type UniformPrintReport = ReturnType<typeof buildUniformPrintReport>;
 
 /** Structural checks against the record layouts, before the files are offered. */
 export function validateUniformExportText(result: UniformExportResult): string[] {

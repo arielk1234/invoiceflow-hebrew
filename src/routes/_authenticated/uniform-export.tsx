@@ -14,6 +14,7 @@ import {
   validateUniformExportText,
   type UniformExportConfig,
   type UniformExportResult,
+  type UniformPrintReport,
 } from "@/lib/uniform-format";
 
 export const Route = createFileRoute("/_authenticated/uniform-export")({
@@ -231,6 +232,9 @@ function UniformExportPage() {
             >
               הורדת BKMVDATA.TXT
             </button>
+            <button onClick={() => window.print()} className="rounded-lg border px-4 py-2">
+              הדפסת הפלטים 2.6 ו-5.4
+            </button>
           </div>
           <ol className="mt-4 list-decimal space-y-1 pr-5 text-sm text-muted-foreground">
             <li>
@@ -248,8 +252,16 @@ function UniformExportPage() {
             <li>בוחרים סט תווים ״Windows (ANSI) ISO-8859-8-I״.</li>
             <li>מעלים את שני הקבצים ומחכים לסיום הבדיקה.</li>
             <li>שומרים את קובץ התוצאה, ומצרפים אותו לבקשה לרישום התוכנה.</li>
+            <li>
+              מדפיסים (או שומרים כ-PDF) את הפלטים 2.6 ו-5.4 למטה, <b>מאותה הפקה</b>, ומצרפים אותם
+              לבקשה. אם מפיקים קובץ בדיקה חדש, חייבים לבדוק בסימולטור ולהדפיס את הפלטים מחדש.
+            </li>
           </ol>
         </section>
+      )}
+
+      {simulator && (
+        <PrintedReports report={simulator.printReport} producedAt={simulator.generatedAt} />
       )}
 
       {result && report && (
@@ -293,81 +305,102 @@ function UniformExportPage() {
             result={result}
           />
 
-          {/* Appendix 4 (section 5.4): the report printed when the files are produced. */}
-          <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm print:border-0 print:shadow-none">
-            <h2 className="text-xl font-bold">הפקת קבצים במבנה אחיד</h2>
-            <p className="mt-3">מספר עוסק מורשה: {report.businessTaxId}</p>
-            <p>שם בית העסק: {report.businessName}</p>
-            <p className="mt-3 font-semibold">ביצוע ממשק פתוח הסתיים בהצלחה.</p>
-            <p>
-              הנתונים נשמרו בנתיב הבא: <span dir="ltr">{report.folder}</span>
-            </p>
-            <p>
-              טווח תאריכים: מתאריך {ddmmyyyy(report.fromDate)} ועד תאריך {ddmmyyyy(report.toDate)}
-            </p>
-
-            <table className="mt-5 w-full border-collapse text-sm">
-              <thead>
-                <tr>
-                  <th className="border p-2 text-right">קוד רשומה</th>
-                  <th className="border p-2 text-right">תיאור רשומה</th>
-                  <th className="border p-2 text-right">סך רשומות</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.records.map((row) => (
-                  <tr key={row.code}>
-                    <td className="border p-2">{row.code}</td>
-                    <td className="border p-2">{row.description}</td>
-                    <td className="border p-2">{row.count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <p className="mt-5 text-sm">
-              הנתונים הופקו באמצעות תוכנת: {report.softwareName} {report.softwareVersion}, מספר
-              תעודת הרישום: {report.registrationNumber || "—"}, בתאריך: {report.producedDate}, בשעה:{" "}
-              {report.producedTime}.
-            </p>
-            <p className="mt-6 text-center text-sm font-semibold">*** סוף הפלט ***</p>
-          </section>
-
-          {/* Section 2.6: count and total of every document type in appendix 1. */}
-          <div className="mt-6 print:break-before-page">
-            <ReportFrame
-              title="פלט לאימות נתונים: מסמכים לפי סוג"
-              businessName={report.businessName}
-              taxId={report.businessTaxId}
-              period={`${ddmmyyyy(report.fromDate)} – ${ddmmyyyy(report.toDate)}`}
-              producedAt={result.generatedAt}
-            >
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr>
-                    <th className="border p-2 text-right">מספר המסמך</th>
-                    <th className="border p-2 text-right">סוג המסמך</th>
-                    <th className="border p-2 text-right">סה״כ כמותי</th>
-                    <th className="border p-2 text-right">סה״כ כספי (בש״ח)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.documents.map((row) => (
-                    <tr key={row.code}>
-                      <td className="border p-2">{row.code}</td>
-                      <td className="border p-2">{row.description}</td>
-                      <td className="border p-2">{row.count}</td>
-                      <td className="border p-2">
-                        {row.total.toLocaleString("he-IL", { minimumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </ReportFrame>
-          </div>
+          <PrintedReports report={report} producedAt={result.generatedAt} />
         </>
       )}
     </AppShell>
+  );
+}
+
+/**
+ * The two printouts the Tax Authority asks for with the registration request. Both come from
+ * the same file as the simulator report, so the C100 counts and totals must agree with it.
+ */
+function PrintedReports({ report, producedAt }: { report: UniformPrintReport; producedAt: Date }) {
+  return (
+    <>
+      {/* Appendix 4 (section 5.4): the report printed when the files are produced. */}
+      <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm print:border-0 print:shadow-none">
+        <h2 className="text-xl font-bold">הפקת קבצים במבנה אחיד</h2>
+        <p className="mt-3">מספר עוסק מורשה: {report.businessTaxId}</p>
+        <p>שם בית העסק: {report.businessName}</p>
+        <p className="mt-3 font-semibold">ביצוע ממשק פתוח הסתיים בהצלחה.</p>
+        <p>
+          הנתונים נשמרו בנתיב הבא: <span dir="ltr">{report.folder}</span>
+        </p>
+        <p>
+          טווח תאריכים: מתאריך {ddmmyyyy(report.fromDate)} ועד תאריך {ddmmyyyy(report.toDate)}
+        </p>
+
+        <p className="mt-5 font-semibold">פירוט סך סוגי הרשומות בקובץ BKMVDATA.TXT:</p>
+        <table className="mt-2 w-full border-collapse text-sm">
+          <thead>
+            <tr>
+              <th className="border p-2 text-right">קוד רשומה</th>
+              <th className="border p-2 text-right">תיאור רשומה</th>
+              <th className="border p-2 text-right">סך רשומות</th>
+            </tr>
+          </thead>
+          <tbody>
+            {report.records.map((row) => (
+              <tr key={row.code}>
+                <td className="border p-2">{row.code}</td>
+                <td className="border p-2">{row.description}</td>
+                <td className="border p-2">{row.count}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="font-bold">
+              <td className="border p-2" colSpan={2}>
+                סה״כ
+              </td>
+              <td className="border p-2">{report.recordsTotal}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <p className="mt-5 text-sm">
+          הנתונים הופקו באמצעות תוכנת: {report.softwareName} {report.softwareVersion}, מספר תעודת
+          הרישום: {report.registrationNumber || "—"}, בתאריך: {report.producedDate}, בשעה:{" "}
+          {report.producedTime}.
+        </p>
+        <p className="mt-6 text-center text-sm font-semibold">*** סוף הפלט ***</p>
+      </section>
+
+      {/* Section 2.6: count and total of every document type in appendix 1. */}
+      <div className="mt-6 print:break-before-page">
+        <ReportFrame
+          title="פלט לאימות נתונים: מסמכים לפי סוג"
+          businessName={report.businessName}
+          taxId={report.businessTaxId}
+          period={`${ddmmyyyy(report.fromDate)} – ${ddmmyyyy(report.toDate)}`}
+          producedAt={producedAt}
+        >
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr>
+                <th className="border p-2 text-right">מספר המסמך</th>
+                <th className="border p-2 text-right">סוג המסמך</th>
+                <th className="border p-2 text-right">סה״כ כמותי</th>
+                <th className="border p-2 text-right">סה״כ כספי כולל מע״מ (שדה 1223)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.documents.map((row) => (
+                <tr key={row.code}>
+                  <td className="border p-2">{row.code}</td>
+                  <td className="border p-2">{row.description}</td>
+                  <td className="border p-2">{row.count}</td>
+                  <td className="border p-2">
+                    {row.total.toLocaleString("he-IL", { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </ReportFrame>
+      </div>
+    </>
   );
 }
